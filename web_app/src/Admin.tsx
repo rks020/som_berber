@@ -132,8 +132,17 @@ const AppointmentsManager = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<{date: Date, hour: number} | null>(null);
-  const [newApptCustomer, setNewApptCustomer] = useState('');
+  
+  // Form fields
+  const [newTitle, setNewTitle] = useState('');
   const [newApptService, setNewApptService] = useState('');
+  const [newDate, setNewDate] = useState('');
+  const [newTime, setNewTime] = useState('');
+  const [newDuration, setNewDuration] = useState(60);
+  const [newPrice, setNewPrice] = useState<number | ''>('');
+  const [newOthers, setNewOthers] = useState('');
+  const [newColor, setNewColor] = useState('#ff9800');
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -164,26 +173,29 @@ const AppointmentsManager = () => {
 
   const handleCreateAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedSlot || !selectedBarberId || !newApptCustomer || !newApptService) return;
+    if (!selectedBarberId || !newTitle || !newApptService || !newDate || !newTime) return;
     
     setIsSubmitting(true);
     const serviceDetails = services.find(s => s.id === newApptService);
-    const slotTime = new Date(selectedSlot.date);
-    slotTime.setHours(selectedSlot.hour, 0, 0, 0);
+    const dt = new Date(`${newDate}T${newTime}`);
+
+    const matchedCustomer = customers.find(c => c.name.toLowerCase() === newTitle.toLowerCase());
 
     const id = crypto.randomUUID();
     await supabase.from('appointments').insert({
       id,
-      title: customers.find(c => c.id === newApptCustomer)?.name || 'Bilinmiyor',
+      title: newTitle,
       category: serviceDetails?.name || '',
-      date_time: slotTime.toISOString(),
+      date_time: dt.toISOString(),
       status: 'onaylandı',
-      customer_id: newApptCustomer,
-      barber_id: selectedBarberId
+      customer_id: matchedCustomer ? matchedCustomer.id : null,
+      barber_id: selectedBarberId,
+      durationMinutes: newDuration,
+      price: Number(newPrice) || 0,
+      additionalPeople: newOthers,
+      colorHex: newColor
     });
 
-    setNewApptCustomer('');
-    setNewApptService('');
     setIsModalOpen(false);
     await fetchData();
     setIsSubmitting(false);
@@ -279,7 +291,18 @@ const AppointmentsManager = () => {
                   return (
                     <div 
                       key={dIdx} 
-                      onClick={() => { setSelectedSlot({ date: day, hour }); setIsModalOpen(true); }}
+                      onClick={() => { 
+                        setSelectedSlot({ date: day, hour });
+                        setNewDate(format(day, 'yyyy-MM-dd'));
+                        setNewTime(hour.toString().padStart(2, '0') + ':00');
+                        setNewTitle('');
+                        setNewApptService('');
+                        setNewDuration(60);
+                        setNewPrice('');
+                        setNewOthers('');
+                        setNewColor('#ff9800');
+                        setIsModalOpen(true); 
+                      }}
                       style={{ borderRight: '1px solid rgba(255,255,255,0.05)', padding: '1px', minHeight: '28px', cursor: 'pointer' }}
                     >
                       {apps.map(app => (
@@ -324,34 +347,92 @@ const AppointmentsManager = () => {
 
       {isModalOpen && selectedSlot && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="glass-panel" style={{ width: '400px' }}>
+          <div className="glass-panel" style={{ width: '400px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h3 style={{ margin: 0 }}>Yeni Randevu Ekle</h3>
-              <button onClick={() => setIsModalOpen(false)} style={{ background: 'transparent', padding: 0, color: 'var(--text-light)' }}><X size={24} /></button>
+              <h3 style={{ margin: 0 }}>Yeni Randevu</h3>
+              <button onClick={() => setIsModalOpen(false)} style={{ background: 'transparent', padding: 0, color: 'var(--text-light)', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
             </div>
-            
-            <p style={{ color: 'var(--primary-color)', marginBottom: '16px' }}>
-              {format(selectedSlot.date, 'd MMMM yyyy', { locale: tr })} - {selectedSlot.hour.toString().padStart(2, '0')}:00
-            </p>
 
             <form onSubmit={handleCreateAppointment}>
               <div className="form-group" style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '8px' }}>Müşteri</label>
-                <select required value={newApptCustomer} onChange={e => setNewApptCustomer(e.target.value)}>
-                  <option value="">Seçiniz</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              
-              <div className="form-group" style={{ marginBottom: '24px' }}>
-                <label style={{ display: 'block', marginBottom: '8px' }}>Hizmet</label>
-                <select required value={newApptService} onChange={e => setNewApptService(e.target.value)}>
-                  <option value="">Seçiniz</option>
-                  {services.map(s => <option key={s.id} value={s.id}>{s.name} ({s.price}₺)</option>)}
+                <label style={{ display: 'block', marginBottom: '8px' }}>Kategori</label>
+                <select 
+                  required 
+                  value={newApptService} 
+                  onChange={e => {
+                    setNewApptService(e.target.value);
+                    const s = services.find(serv => serv.id === e.target.value);
+                    if(s) setNewPrice(s.price);
+                  }}
+                >
+                  <option value="">Kategori Seçin</option>
+                  {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
               </div>
 
-              <button type="submit" disabled={isSubmitting} style={{ width: '100%' }}>
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Müşteri İsmi / Başlık</label>
+                <input 
+                  type="text" 
+                  required 
+                  list="customer-list"
+                  placeholder="Müşteri seçin veya isim yaz..." 
+                  value={newTitle} 
+                  onChange={e => setNewTitle(e.target.value)} 
+                />
+                <datalist id="customer-list">
+                  {customers.map(c => <option key={c.id} value={c.name} />)}
+                </datalist>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '8px' }}>Tarih</label>
+                  <input type="date" required value={newDate} onChange={e => setNewDate(e.target.value)} />
+                </div>
+                <div className="form-group" style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '8px' }}>Başlangıç</label>
+                  <input type="time" required value={newTime} onChange={e => setNewTime(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Süre (Dakika)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <button type="button" onClick={() => setNewDuration(Math.max(15, newDuration - 15))} style={{ padding: '4px 12px', background: 'transparent', border: '1px solid var(--text-muted)' }}>-</button>
+                  <span style={{ fontWeight: 'bold' }}>{newDuration} dk</span>
+                  <button type="button" onClick={() => setNewDuration(newDuration + 15)} style={{ padding: '4px 12px', background: 'transparent', border: '1px solid var(--text-muted)' }}>+</button>
+                  <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '0.8rem' }}>Default (1 sa)</span>
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Fiyat (TL)</label>
+                <input type="number" placeholder="Fiyat" value={newPrice} onChange={e => setNewPrice(e.target.value === '' ? '' : Number(e.target.value))} />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Diğer Kişiler (Opsiyonel)</label>
+                <input type="text" placeholder="İsim ekle..." value={newOthers} onChange={e => setNewOthers(e.target.value)} />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Etiket Rengi</label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {['#ff9800', '#f44336', '#4caf50', '#2196f3', '#9c27b0'].map(color => (
+                    <div 
+                      key={color} 
+                      onClick={() => setNewColor(color)}
+                      style={{ 
+                        width: '24px', height: '24px', borderRadius: '50%', background: color, cursor: 'pointer',
+                        border: newColor === color ? '2px solid white' : 'none'
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <button type="submit" disabled={isSubmitting} style={{ width: '100%', padding: '12px', fontWeight: 'bold' }}>
                 {isSubmitting ? 'Kaydediliyor...' : 'Randevu Oluştur'}
               </button>
             </form>
