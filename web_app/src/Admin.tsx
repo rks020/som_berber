@@ -142,6 +142,7 @@ const AppointmentsManager = () => {
   const [newPrice, setNewPrice] = useState<number | ''>('');
   const [newOthers, setNewOthers] = useState('');
   const [newColor, setNewColor] = useState('#ff9800');
+  const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -190,10 +191,10 @@ const AppointmentsManager = () => {
       status: 'onaylandı',
       customer_id: matchedCustomer ? matchedCustomer.id : null,
       barber_id: selectedBarberId,
-      durationMinutes: newDuration,
+      duration_minutes: newDuration,
       price: Number(newPrice) || 0,
-      additionalPeople: newOthers,
-      colorHex: newColor
+      additional_people: newOthers,
+      color_hex: newColor
     });
 
     setIsModalOpen(false);
@@ -301,6 +302,7 @@ const AppointmentsManager = () => {
                         setNewPrice('');
                         setNewOthers('');
                         setNewColor('#ff9800');
+                        setIsCategoryDropdownOpen(false);
                         setIsModalOpen(true); 
                       }}
                       style={{ borderRight: '1px solid rgba(255,255,255,0.05)', padding: '1px', minHeight: '28px', cursor: 'pointer' }}
@@ -354,31 +356,68 @@ const AppointmentsManager = () => {
             </div>
 
             <form onSubmit={handleCreateAppointment}>
-              <div className="form-group" style={{ marginBottom: '16px' }}>
+              <div className="form-group" style={{ marginBottom: '16px', position: 'relative' }}>
                 <label style={{ display: 'block', marginBottom: '8px' }}>Kategori (Çoklu Seçim)</label>
-                <div style={{ maxHeight: '150px', overflowY: 'auto', background: 'var(--glass-bg)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  {services.map(s => (
-                    <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={newApptServices.includes(s.id)}
-                        onChange={(e) => {
-                          let updated = [...newApptServices];
-                          if (e.target.checked) updated.push(s.id);
-                          else updated = updated.filter(id => id !== s.id);
-                          setNewApptServices(updated);
-
-                          const total = updated.reduce((sum, id) => {
-                            const serv = services.find(x => x.id === id);
-                            return sum + (serv?.price || 0);
-                          }, 0);
-                          setNewPrice(total || '');
-                        }}
-                      />
-                      {s.name} ({s.price}₺)
-                    </label>
-                  ))}
+                <div 
+                  onClick={() => setIsCategoryDropdownOpen(!isCategoryDropdownOpen)}
+                  style={{ 
+                    padding: '12px', 
+                    background: 'rgba(255, 255, 255, 0.05)', 
+                    border: '1px solid rgba(255,255,255,0.1)', 
+                    borderRadius: '8px', 
+                    cursor: 'pointer',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    minHeight: '48px'
+                  }}>
+                  <span style={{ opacity: newApptServices.length > 0 ? 1 : 0.5 }}>
+                    {newApptServices.length > 0 
+                      ? newApptServices.map(id => services.find(s => s.id === id)?.name).filter(Boolean).join(', ') 
+                      : 'Kategori Seçin'}
+                  </span>
+                  <span>▼</span>
                 </div>
+                
+                {isCategoryDropdownOpen && (
+                  <div style={{ 
+                    position: 'absolute', 
+                    top: '100%', 
+                    left: 0, 
+                    right: 0, 
+                    background: 'var(--bg-card)', 
+                    border: '1px solid rgba(255,255,255,0.1)', 
+                    borderRadius: '8px', 
+                    marginTop: '4px',
+                    maxHeight: '200px', 
+                    overflowY: 'auto',
+                    zIndex: 10,
+                    boxShadow: '0 10px 25px rgba(0,0,0,0.5)'
+                  }}>
+                    {services.map(s => (
+                      <label key={s.id} onClick={(e) => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)', margin: 0 }}>
+                        <input 
+                          type="checkbox" 
+                          checked={newApptServices.includes(s.id)}
+                          onChange={(e) => {
+                            let updated = [...newApptServices];
+                            if (e.target.checked) updated.push(s.id);
+                            else updated = updated.filter(id => id !== s.id);
+                            setNewApptServices(updated);
+
+                            const total = updated.reduce((sum, id) => {
+                              const serv = services.find(x => x.id === id);
+                              return sum + (serv?.price || 0);
+                            }, 0);
+                            setNewPrice(total || '');
+                          }}
+                          style={{ width: '18px', height: '18px', accentColor: 'var(--primary-color)' }}
+                        />
+                        <span>{s.name} ({s.price}₺)</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="form-group" style={{ marginBottom: '16px' }}>
