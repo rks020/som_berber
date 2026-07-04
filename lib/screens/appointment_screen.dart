@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
+import 'package:uuid/uuid.dart';
 import '../models/appointment.dart';
 import '../providers/salon_provider.dart';
 import '../theme/app_theme.dart';
@@ -323,7 +324,7 @@ class _AppointmentDialogState extends State<_AppointmentDialog> {
       final appointment = AppointmentModel(
         id:
             widget.existingAppointment?.id ??
-            DateTime.now().millisecondsSinceEpoch.toString(),
+            const Uuid().v4(),
         title: _titleController.text.trim(),
         category: _selectedCategories.isEmpty ? 'Genel' : _selectedCategories.join(', '),
         dateTime: _selectedDate,
