@@ -45,6 +45,7 @@ class Visit {
     String? notes,
     String? status,
     String? photoPath,
+    bool clearPhoto = false,
   }) {
     return Visit(
       id: id ?? this.id,
@@ -59,7 +60,7 @@ class Visit {
       dateTime: dateTime ?? this.dateTime,
       notes: notes ?? this.notes,
       status: status ?? this.status,
-      photoPath: photoPath ?? this.photoPath,
+      photoPath: clearPhoto ? null : (photoPath ?? this.photoPath),
     );
   }
 

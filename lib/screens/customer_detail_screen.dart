@@ -539,7 +539,7 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                                     );
                                     if (confirmed == true) {
                                       final updated = latestVisit.copyWith(
-                                        photoPath: null,
+                                        clearPhoto: true,
                                       );
                                       await Provider.of<SalonProvider>(
                                         context,
