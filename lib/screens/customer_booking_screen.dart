@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/barber.dart';
 import '../models/service.dart';
 import '../models/appointment.dart';
@@ -25,12 +26,39 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
   final _phoneController = TextEditingController();
   
   bool _isSubmitting = false;
+  String? _savedCustomerId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedCustomer();
+  }
+
+  Future<void> _loadSavedCustomer() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedId = prefs.getString('saved_customer_id');
+    final savedName = prefs.getString('saved_customer_name');
+    final savedPhone = prefs.getString('saved_customer_phone');
+    if (savedId != null && mounted) {
+      setState(() {
+        _savedCustomerId = savedId;
+        _nameController.text = savedName ?? '';
+        _phoneController.text = savedPhone ?? '';
+      });
+    }
+  }
+
+  Future<void> _saveCustomerLocally(String id, String name, String phone) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('saved_customer_id', id);
+    await prefs.setString('saved_customer_name', name);
+    await prefs.setString('saved_customer_phone', phone);
+  }
 
   List<String> _generateTimeSlots() {
     final slots = <String>[];
-    for (int hour = 9; hour < 20; hour++) {
+    for (int hour = 8; hour <= 22; hour++) {
       slots.add('${hour.toString().padLeft(2, '0')}:00');
-      slots.add('${hour.toString().padLeft(2, '0')}:30');
     }
     return slots;
   }
@@ -58,7 +86,7 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
       final appEnd = app.dateTime.add(Duration(minutes: app.durationMinutes));
       
       final slotStart = slotTime;
-      final slotEnd = slotTime.add(const Duration(minutes: 30));
+      final slotEnd = slotTime.add(const Duration(hours: 1));
 
       if (slotStart.isBefore(appEnd) && slotEnd.isAfter(appStart)) {
         return true;
@@ -78,15 +106,36 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
     setState(() => _isSubmitting = true);
     
     try {
-      final customerId = const Uuid().v4();
-      final newCustomer = Customer(
-        id: customerId,
-        name: _nameController.text.trim(),
-        phone: _phoneController.text.trim(),
-        createdAt: DateTime.now(),
-      );
-      
-      await provider.addCustomer(newCustomer);
+      String customerId;
+      if (_savedCustomerId != null) {
+        customerId = _savedCustomerId!;
+        final newName = _nameController.text.trim();
+        final newPhone = _phoneController.text.trim();
+        final prefs = await SharedPreferences.getInstance();
+        final oldName = prefs.getString('saved_customer_name') ?? '';
+        final oldPhone = prefs.getString('saved_customer_phone') ?? '';
+        
+        if (oldName != newName || oldPhone != newPhone) {
+          final updatedCustomer = Customer(
+            id: customerId,
+            name: newName,
+            phone: newPhone,
+            createdAt: DateTime.now(),
+          );
+          await provider.updateCustomer(updatedCustomer);
+          await _saveCustomerLocally(customerId, newName, newPhone);
+        }
+      } else {
+        customerId = const Uuid().v4();
+        final newCustomer = Customer(
+          id: customerId,
+          name: _nameController.text.trim(),
+          phone: _phoneController.text.trim(),
+          createdAt: DateTime.now(),
+        );
+        await provider.addCustomer(newCustomer);
+        await _saveCustomerLocally(customerId, newCustomer.name, newCustomer.phone);
+      }
 
       final parts = _selectedTime!.split(':');
       final hour = int.parse(parts[0]);
@@ -104,7 +153,7 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
         title: _nameController.text.trim(),
         category: _selectedService!.name,
         dateTime: appTime,
-        durationMinutes: 30,
+        durationMinutes: 60, // 1 hour slot
         price: _selectedService!.price,
         colorHex: '#4CAF50', // Green for pending
         status: 'bekliyor',
