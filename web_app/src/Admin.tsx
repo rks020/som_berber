@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
-import { LayoutDashboard, Users, Scissors, CalendarCheck, LogOut, Check, X, Trash2, Wallet } from 'lucide-react';
+import { LayoutDashboard, Users, Scissors, CalendarCheck, LogOut, Check, X, Trash2, Wallet, Clock } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
@@ -86,6 +86,7 @@ const Sidebar = ({ onLogout }: { onLogout: () => void }) => {
   const location = useLocation();
   const menu = [
     { name: 'Randevular', path: '/admin', icon: <CalendarCheck size={20} /> },
+    { name: 'Talepler', path: '/admin/requests', icon: <Clock size={20} /> },
     { name: 'Müşteriler', path: '/admin/customers', icon: <Users size={20} /> },
     { name: 'Hizmetler', path: '/admin/services', icon: <Scissors size={20} /> },
     { name: 'Adisyonlar', path: '/admin/visits', icon: <LayoutDashboard size={20} /> },
@@ -1097,6 +1098,101 @@ const FinanceManager = () => {
   );
 };
 
+const RequestsManager = () => {
+  const [requests, setRequests] = useState<Appointment[]>([]);
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+
+    // Subscribe to realtime changes in appointments to keep requests synced
+    const channel = supabase
+      .channel('web:requests')
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'appointments' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    const { data: bData } = await supabase.from('barbers').select('*');
+    if (bData) setBarbers(bData);
+
+    const { data: rData } = await supabase
+      .from('appointments')
+      .select('*')
+      .eq('status', 'bekliyor')
+      .order('date_time', { ascending: true });
+    
+    if (rData) setRequests(rData);
+    setLoading(false);
+  };
+
+  const handleApprove = async (id: string) => {
+    await supabase.from('appointments').update({ status: 'onaylandı' }).eq('id', id);
+    fetchData();
+  };
+
+  const handleReject = async (id: string) => {
+    if (confirm('Bu randevu talebini reddetmek (silmek) istediğinize emin misiniz?')) {
+      await supabase.from('appointments').delete().eq('id', id);
+      fetchData();
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div>
+          <h2 style={{ margin: 0 }}>Bekleyen Randevu Talepleri</h2>
+          <p style={{ color: 'var(--text-muted)', margin: '8px 0 0' }}>Müşterilerin onay bekleyen randevu isteklerini yönetin.</p>
+        </div>
+      </div>
+
+      {loading ? <p>Yükleniyor...</p> : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {requests.map(r => (
+            <div key={r.id} className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: '0 0 8px 0', color: 'var(--primary-color)' }}>
+                  {r.title}
+                </h3>
+                <p style={{ margin: 0, color: 'var(--text-color)', fontSize: '0.95rem', fontWeight: 500 }}>
+                  Hizmet: {r.category} | Berber: {barbers.find(b => b.id === r.barber_id)?.name || 'Bilinmiyor'}
+                </p>
+                <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                  Tarih/Saat: {format(new Date(r.date_time), 'dd MMM yyyy HH:mm', { locale: tr })}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button 
+                  onClick={() => handleReject(r.id)} 
+                  style={{ background: 'transparent', border: '1px solid #ff4444', color: '#ff4444', padding: '8px 16px', fontWeight: 'bold' }}
+                >
+                  Reddet
+                </button>
+                <button 
+                  onClick={() => handleApprove(r.id)} 
+                  style={{ background: 'var(--primary-color)', color: 'black', padding: '8px 16px', fontWeight: 'bold' }}
+                >
+                  Onayla
+                </button>
+              </div>
+            </div>
+          ))}
+          {requests.length === 0 && <p style={{ color: 'var(--text-muted)' }}>Bekleyen randevu talebi bulunmuyor.</p>}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
@@ -1130,6 +1226,7 @@ export default function Admin() {
           <Route path="/customers" element={<CustomersManager />} />
           <Route path="/services" element={<ServicesManager />} />
           <Route path="/visits" element={<VisitsManager />} />
+          <Route path="/requests" element={<RequestsManager />} />
           <Route path="/finance" element={<FinanceManager />} />
         </Routes>
       </div>

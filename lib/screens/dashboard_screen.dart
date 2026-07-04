@@ -12,8 +12,15 @@ import 'visit_entry_screen.dart';
 import 'auth_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  bool _isTodayVisitsExpanded = true;
 
   @override
   Widget build(BuildContext context) {
@@ -399,50 +406,164 @@ class DashboardScreen extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 // 5. Today's visits
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isTodayVisitsExpanded = !_isTodayVisitsExpanded;
+                    });
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildSectionTitle(
+                        'Bugünkü İşlemler (${todayVisits.length})',
+                      ),
+                      Icon(
+                        _isTodayVisitsExpanded ? Icons.expand_less : Icons.expand_more,
+                        color: AppTheme.goldMedium,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+                if (_isTodayVisitsExpanded) ...[
+                  const SizedBox(height: 12),
+                  if (todayVisits.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 32),
+                      decoration: BoxDecoration(
+                        color: AppTheme.bgCard,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFF222222)),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.content_cut, color: Colors.grey, size: 40),
+                          SizedBox(height: 10),
+                          Text(
+                            'Bugün henüz bir işlem girilmemiş.',
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: todayVisits.length > 5 ? 5 : todayVisits.length,
+                      itemBuilder: (context, index) {
+                        return VisitCard(visit: todayVisits[index]);
+                      },
+                    ),
+                ],
+                const SizedBox(height: 24),
+
+                // 6. Pending Appointments
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     _buildSectionTitle(
-                      'Bugünkü İşlemler (${todayVisits.length})',
+                      'Bekleyen Randevular (${provider.appointments.where((a) => a.status == 'bekliyor').length})',
                     ),
-                    if (todayVisits.isNotEmpty)
-                      const Icon(
-                        Icons.history_toggle_off,
-                        color: AppTheme.goldMedium,
-                        size: 18,
-                      ),
+                    const Icon(
+                      Icons.pending_actions,
+                      color: AppTheme.goldMedium,
+                      size: 18,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                if (todayVisits.isEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 32),
-                    decoration: BoxDecoration(
-                      color: AppTheme.bgCard,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFF222222)),
-                    ),
-                    child: const Column(
-                      children: [
-                        Icon(Icons.content_cut, color: Colors.grey, size: 40),
-                        SizedBox(height: 10),
-                        Text(
-                          'Bugün henüz bir işlem girilmemiş.',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  ListView.builder(
+                (() {
+                  final pendingApps = provider.appointments.where((a) => a.status == 'bekliyor').toList();
+                  if (pendingApps.isEmpty) {
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 32),
+                      decoration: BoxDecoration(
+                        color: AppTheme.bgCard,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFF222222)),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.hourglass_empty, color: Colors.grey, size: 40),
+                          SizedBox(height: 10),
+                          Text(
+                            'Bekleyen randevu talebi bulunmuyor.',
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return ListView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    itemCount: todayVisits.length > 5 ? 5 : todayVisits.length,
+                    itemCount: pendingApps.length,
                     itemBuilder: (context, index) {
-                      return VisitCard(visit: todayVisits[index]);
+                      final appt = pendingApps[index];
+                      final barberName = provider.barbers.firstWhere(
+                        (b) => b.id == appt.barberId,
+                        orElse: () => Barber(id: '', name: 'Bilinmiyor', phone: ''),
+                      ).name;
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: AppTheme.bgCard,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.2)),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    appt.title,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${appt.category}  •  Berber: $barberName',
+                                    style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    DateFormat('dd MMM yyyy HH:mm', 'tr_TR').format(appt.dateTime),
+                                    style: const TextStyle(color: AppTheme.goldMedium, fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.close, color: Colors.red),
+                                  onPressed: () => provider.deleteAppointment(appt.id),
+                                  tooltip: 'Reddet',
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.check, color: Colors.green),
+                                  onPressed: () {
+                                    final approved = appt.copyWith(status: 'onaylandı');
+                                    provider.updateAppointment(approved);
+                                  },
+                                  tooltip: 'Onayla',
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
                     },
-                  ),
+                  );
+                })(),
                 const SizedBox(height: 20),
               ],
             ),
