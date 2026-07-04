@@ -31,6 +31,9 @@ interface Appointment {
   status: string;
   customer_id: string;
   barber_id: string;
+  duration_minutes: number;
+  color_hex: string;
+  price: number;
 }
 
 const AdminLogin = ({ onLogin }: { onLogin: () => void }) => {
@@ -281,18 +284,32 @@ const AppointmentsManager = () => {
             ))}
           </div>
 
-          <div style={{ minWidth: '800px' }}>
-            {hours.map(hour => (
-              <div key={hour} style={{ display: 'grid', gridTemplateColumns: '50px repeat(7, 1fr)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={{ padding: '4px 0', fontSize: '0.7rem', color: 'var(--text-muted)', borderRight: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+          <div style={{ minWidth: '800px', display: 'flex' }}>
+            {/* Hours column */}
+            <div style={{ width: '50px', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
+              {hours.map(hour => (
+                <div key={hour} style={{ height: '48px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '4px', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                   {hour.toString().padStart(2, '0')}:00
                 </div>
-                {days.map((day, dIdx) => {
-                  const apps = getAppointmentsForSlot(day, hour);
-                  return (
+              ))}
+            </div>
+            
+            {/* Days columns */}
+            {days.map((day, dIdx) => {
+              const dayApps = filteredAppointments.filter(app => {
+                const appDate = parseISO(app.date_time);
+                return appDate.getDate() === day.getDate() && 
+                       appDate.getMonth() === day.getMonth() && 
+                       appDate.getFullYear() === day.getFullYear();
+              });
+
+              return (
+                <div key={dIdx} style={{ flex: 1, position: 'relative', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
+                  {/* Grid cells for clicking */}
+                  {hours.map(hour => (
                     <div 
-                      key={dIdx} 
-                      onClick={() => { 
+                      key={hour}
+                      onClick={() => {
                         setSelectedSlot({ date: day, hour });
                         setNewDate(format(day, 'yyyy-MM-dd'));
                         setNewTime(hour.toString().padStart(2, '0') + ':00');
@@ -305,44 +322,59 @@ const AppointmentsManager = () => {
                         setIsCategoryDropdownOpen(false);
                         setIsModalOpen(true); 
                       }}
-                      style={{ borderRight: '1px solid rgba(255,255,255,0.05)', padding: '1px', minHeight: '28px', cursor: 'pointer' }}
-                    >
-                      {apps.map(app => (
-                        <div 
-                          key={app.id} 
-                          onClick={(e) => e.stopPropagation()}
-                          title={`${app.title} - ${app.category}`}
-                          style={{ 
-                            background: app.status === 'bekliyor' ? '#ff9800' : 'var(--primary-color)', 
-                            color: '#000', 
-                            padding: '2px 4px', 
-                            borderRadius: '4px', 
-                            marginBottom: '1px',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                          }}
-                        >
-                          <div style={{ fontWeight: 'bold', fontSize: '0.65rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {app.title} - {app.category}
-                          </div>
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            {app.status === 'bekliyor' && (
-                              <button onClick={() => handleUpdateStatus(app.id, 'onaylandı')} style={{ background: 'transparent', padding: '0', color: '#000', border: 'none' }}>
-                                <Check size={12} />
-                              </button>
-                            )}
-                            <button onClick={() => handleDelete(app.id)} style={{ background: 'transparent', padding: '0', color: '#ff4444', border: 'none' }}>
-                              <X size={12} />
-                            </button>
-                          </div>
+                      style={{ height: '48px', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }}
+                    />
+                  ))}
+                  
+                  {/* Appointments overlaid */}
+                  {dayApps.map(app => {
+                    const appDate = parseISO(app.date_time);
+                    const minutesFromStart = (appDate.getHours() - 8) * 60 + appDate.getMinutes();
+                    const top = (minutesFromStart / 60) * 48;
+                    const duration = app.duration_minutes || 60;
+                    const height = (duration / 60) * 48;
+
+                    return (
+                      <div 
+                        key={app.id} 
+                        onClick={(e) => e.stopPropagation()}
+                        title={`${app.title} - ${app.category}`}
+                        style={{ 
+                          position: 'absolute',
+                          top: `${top}px`,
+                          height: `${Math.max(20, height - 2)}px`,
+                          left: '2px',
+                          right: '2px',
+                          background: app.color_hex || (app.status === 'bekliyor' ? '#ff9800' : 'var(--primary-color)'), 
+                          color: '#000', 
+                          padding: '4px', 
+                          borderRadius: '4px', 
+                          display: 'flex',
+                          flexDirection: 'column',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                          zIndex: 5,
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <div style={{ fontWeight: 'bold', fontSize: '0.65rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {app.title} - {app.category}
                         </div>
-                      ))}
-                    </div>
-                  );
-                })}
-              </div>
-            ))}
+                        <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', marginTop: 'auto' }}>
+                          {app.status === 'bekliyor' && (
+                            <button onClick={() => handleUpdateStatus(app.id, 'onaylandı')} style={{ background: 'rgba(0,0,0,0.1)', padding: '2px', color: '#000', border: 'none', borderRadius: '4px' }}>
+                              <Check size={12} />
+                            </button>
+                          )}
+                          <button onClick={() => handleDelete(app.id)} style={{ background: 'rgba(0,0,0,0.1)', padding: '2px', color: '#ff4444', border: 'none', borderRadius: '4px' }}>
+                            <X size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
