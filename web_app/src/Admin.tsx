@@ -270,7 +270,7 @@ const AppointmentsManager = () => {
           <div style={{ minWidth: '800px' }}>
             {hours.map(hour => (
               <div key={hour} style={{ display: 'grid', gridTemplateColumns: '50px repeat(7, 1fr)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={{ padding: '8px', fontSize: '0.7rem', color: 'var(--text-muted)', borderRight: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
+                <div style={{ padding: '4px 0', fontSize: '0.7rem', color: 'var(--text-muted)', borderRight: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
                   {hour.toString().padStart(2, '0')}:00
                 </div>
                 {days.map((day, dIdx) => {
@@ -279,7 +279,7 @@ const AppointmentsManager = () => {
                     <div 
                       key={dIdx} 
                       onClick={() => { setSelectedSlot({ date: day, hour }); setIsModalOpen(true); }}
-                      style={{ borderRight: '1px solid rgba(255,255,255,0.05)', padding: '2px', minHeight: '40px', cursor: 'pointer' }}
+                      style={{ borderRight: '1px solid rgba(255,255,255,0.05)', padding: '1px', minHeight: '28px', cursor: 'pointer' }}
                     >
                       {apps.map(app => (
                         <div 
@@ -289,9 +289,9 @@ const AppointmentsManager = () => {
                           style={{ 
                             background: app.status === 'bekliyor' ? '#ff9800' : 'var(--primary-color)', 
                             color: '#000', 
-                            padding: '4px', 
+                            padding: '2px 4px', 
                             borderRadius: '4px', 
-                            marginBottom: '2px',
+                            marginBottom: '1px',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center'
