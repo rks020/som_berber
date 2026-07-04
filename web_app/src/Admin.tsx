@@ -826,6 +826,7 @@ const ServicesManager = () => {
 interface Visit {
   id: string;
   customer_id: string;
+  customer_name?: string;
   barber_id: string;
   date_time: string;
   total_price: number;
@@ -879,7 +880,7 @@ const VisitsManager = () => {
             <div key={v.id} className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h3 style={{ margin: '0 0 8px 0' }}>
-                  {customers.find(c => c.id === v.customer_id)?.name || 'Bilinmiyor'} 
+                  {customers.find(c => c.id === v.customer_id)?.name || v.customer_name || 'Bilinmiyor'} 
                   <span style={{ margin: '0 8px', color: 'var(--text-muted)' }}>-</span>
                   {v.total_price} ₺
                 </h3>
@@ -1073,7 +1074,7 @@ const FinanceManager = () => {
                 <tr><td colSpan={6} style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)' }}>Bu ayda bir ödeme mevcut değil.</td></tr>
               ) : (
                 visits.map(v => {
-                  const customerName = customers.find(c => c.id === v.customer_id)?.name || 'Bilinmiyor';
+                  const customerName = customers.find(c => c.id === v.customer_id)?.name || v.customer_name || 'Bilinmiyor';
                   const barberName = barbers.find(b => b.id === v.barber_id)?.name || 'Bilinmiyor';
                   
                   return (

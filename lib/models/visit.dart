@@ -67,6 +67,7 @@ class Visit {
     return {
       'id': id,
       'customer_id': customerId.isNotEmpty ? customerId : null,
+      'customer_name': customerName,
       'barber_id': barberId.isNotEmpty ? barberId : null,
       'date_time': dateTime.toUtc().toIso8601String(),
       'total_price': totalPrice,
@@ -81,7 +82,7 @@ class Visit {
     return Visit(
       id: map['id'] as String,
       customerId: (map['customer_id'] ?? '') as String,
-      customerName: '', // Lookup dynamically if needed
+      customerName: (map['customer_name'] ?? '') as String,
       barberId: (map['barber_id'] ?? '') as String,
       serviceIds: const [],
       serviceNames: map['services'] != null ? List<String>.from(map['services'] as List) : const [],

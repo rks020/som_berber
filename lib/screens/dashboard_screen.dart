@@ -7,6 +7,7 @@ import '../widgets/logo_widget.dart';
 import '../widgets/visit_card.dart';
 import '../models/appointment.dart';
 import '../models/visit.dart';
+import '../models/barber.dart';
 import 'visit_entry_screen.dart';
 import 'auth_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -332,12 +333,29 @@ class DashboardScreen extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    appt.title,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+                                  RichText(
+                                    text: TextSpan(
+                                      children: [
+                                        TextSpan(
+                                          text: appt.title,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        TextSpan(
+                                          text: ' (${provider.barbers.firstWhere((b) => b.id == appt.barberId, orElse: () => Barber(id: '', name: 'Bilinmiyor', phone: '')).name})',
+                                          style: const TextStyle(
+                                            color: AppTheme.goldMedium,
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
                                     ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
@@ -498,8 +516,8 @@ class DashboardScreen extends StatelessWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          appt.title,
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.goldPrimary),
+                          '${appt.title} (${provider.barbers.firstWhere((b) => b.id == appt.barberId, orElse: () => Barber(id: '', name: 'Bilinmiyor', phone: '')).name})',
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.goldPrimary),
                         ),
                       ),
                     ],
