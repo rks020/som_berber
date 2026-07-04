@@ -116,14 +116,26 @@ const Sidebar = ({ onLogout }: { onLogout: () => void }) => {
   );
 };
 
+import { startOfWeek, addDays, getHours, getDay } from 'date-fns';
+
 const AppointmentsManager = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedBarberId, setSelectedBarberId] = useState<string | null>(null);
+
+  // Week navigation
+  const [currentDate, setCurrentDate] = useState(new Date());
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (barbers.length > 0 && !selectedBarberId) {
+      setSelectedBarberId(barbers[0].id);
+    }
+  }, [barbers, selectedBarberId]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -147,37 +159,114 @@ const AppointmentsManager = () => {
     }
   };
 
+  // Build calendar data
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const hours = Array.from({ length: 17 }, (_, i) => i + 7); // 7 to 23
+
+  const filteredAppointments = appointments.filter(a => a.barber_id === selectedBarberId);
+
+  const getAppointmentsForSlot = (date: Date, hour: number) => {
+    return filteredAppointments.filter(app => {
+      const appDate = parseISO(app.date_time);
+      return appDate.getDate() === date.getDate() &&
+             appDate.getMonth() === date.getMonth() &&
+             appDate.getFullYear() === date.getFullYear() &&
+             appDate.getHours() === hour;
+    });
+  };
+
   return (
     <div>
-      <h2>Randevular</h2>
-      <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>Tüm bekleyen ve onaylanan randevuları yönetin.</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+        <div>
+          <h2>Randevu Listesi</h2>
+          <p style={{ color: 'var(--text-muted)' }}>Berber bazlı haftalık taslak ve randevu yönetimi.</p>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button onClick={() => setCurrentDate(addDays(currentDate, -7))} style={{ background: 'var(--glass-bg)', padding: '8px 12px' }}>&lt;</button>
+          <span style={{ fontWeight: 'bold' }}>{format(weekStart, 'd MMM', { locale: tr })} - {format(addDays(weekStart, 6), 'd MMM yyyy', { locale: tr })}</span>
+          <button onClick={() => setCurrentDate(addDays(currentDate, 7))} style={{ background: 'var(--glass-bg)', padding: '8px 12px' }}>&gt;</button>
+        </div>
+      </div>
       
+      {/* Barber Tabs */}
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
+        {barbers.map(barber => (
+          <button 
+            key={barber.id}
+            onClick={() => setSelectedBarberId(barber.id)}
+            style={{
+              background: selectedBarberId === barber.id ? 'var(--gold-primary)' : 'var(--glass-bg)',
+              color: selectedBarberId === barber.id ? '#000' : 'var(--text-light)',
+              fontWeight: 'bold',
+              border: selectedBarberId === barber.id ? 'none' : '1px solid rgba(255,255,255,0.1)',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {barber.name.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
       {loading ? <p>Yükleniyor...</p> : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {appointments.map(app => (
-            <div key={app.id} className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  {app.title} - {app.category}
-                  {app.status === 'bekliyor' && <span style={{ fontSize: '0.75rem', padding: '4px 8px', background: '#ff9800', color: '#fff', borderRadius: '4px' }}>Bekliyor</span>}
-                  {app.status === 'onaylandı' && <span style={{ fontSize: '0.75rem', padding: '4px 8px', background: '#4caf50', color: '#fff', borderRadius: '4px' }}>Onaylandı</span>}
-                </h3>
-                <p style={{ margin: '8px 0 0', color: 'var(--text-muted)' }}>
-                  <CalendarCheck size={14} style={{ verticalAlign: 'middle', marginRight: '4px' }}/>
-                  {format(parseISO(app.date_time), 'd MMM yyyy HH:mm', { locale: tr })} 
-                  <span style={{ margin: '0 8px' }}>|</span> 
-                  Berber: {barbers.find(b => b.id === app.barber_id)?.name || 'Bilinmiyor'}
-                </p>
+        <div className="glass-panel" style={{ padding: '0', overflowX: 'auto' }}>
+          <div style={{ minWidth: '800px', display: 'grid', gridTemplateColumns: '60px repeat(7, 1fr)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            {/* Header */}
+            <div style={{ padding: '16px', borderRight: '1px solid rgba(255,255,255,0.05)' }}></div>
+            {days.map((day, i) => (
+              <div key={i} style={{ padding: '16px', textAlign: 'center', fontWeight: 'bold', color: 'var(--gold-primary)', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
+                {format(day, 'EEE', { locale: tr })}<br/>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{format(day, 'd MMM', { locale: tr })}</span>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {app.status === 'bekliyor' && (
-                  <button onClick={() => handleUpdateStatus(app.id, 'onaylandı')} style={{ background: '#4caf50', color: 'white' }}><Check size={18} /></button>
-                )}
-                <button onClick={() => handleDelete(app.id)} style={{ background: 'transparent', border: '1px solid #ff4444', color: '#ff4444' }}><Trash2 size={18} /></button>
+            ))}
+          </div>
+
+          <div style={{ minWidth: '800px' }}>
+            {hours.map(hour => (
+              <div key={hour} style={{ display: 'grid', gridTemplateColumns: '60px repeat(7, 1fr)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ padding: '12px', fontSize: '0.8rem', color: 'var(--text-muted)', borderRight: '1px solid rgba(255,255,255,0.05)', textAlign: 'right' }}>
+                  {hour.toString().padStart(2, '0')}:00
+                </div>
+                {days.map((day, dIdx) => {
+                  const apps = getAppointmentsForSlot(day, hour);
+                  return (
+                    <div key={dIdx} style={{ borderRight: '1px solid rgba(255,255,255,0.05)', padding: '4px', minHeight: '60px' }}>
+                      {apps.map(app => (
+                        <div 
+                          key={app.id} 
+                          style={{ 
+                            background: app.status === 'bekliyor' ? '#ff9800' : 'var(--gold-primary)', 
+                            color: '#000', 
+                            padding: '6px', 
+                            borderRadius: '4px', 
+                            fontSize: '0.75rem', 
+                            marginBottom: '4px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px'
+                          }}
+                        >
+                          <div style={{ fontWeight: 'bold' }}>{app.title}</div>
+                          <div>{app.category}</div>
+                          <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                            {app.status === 'bekliyor' && (
+                              <button onClick={() => handleUpdateStatus(app.id, 'onaylandı')} style={{ background: '#4caf50', color: 'white', padding: '2px 4px', fontSize: '10px', flex: 1 }}>Onayla</button>
+                            )}
+                            <button onClick={() => handleDelete(app.id)} style={{ background: '#ff4444', color: 'white', padding: '2px 4px', fontSize: '10px', flex: 1 }}>Sil</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
               </div>
-            </div>
-          ))}
-          {appointments.length === 0 && <p>Henüz randevu yok.</p>}
+            ))}
+          </div>
         </div>
       )}
     </div>

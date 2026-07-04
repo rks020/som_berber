@@ -14,6 +14,8 @@ class AppointmentScreen extends StatefulWidget {
 }
 
 class _AppointmentScreenState extends State<AppointmentScreen> {
+  String? _selectedBarberId;
+
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<SalonProvider>(context);
@@ -32,27 +34,64 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           // 16 hours (7:00-23:00)
-          // Fill remaining space so calendar has NO vertical scroll => drag works
           const headerHeight = 120.0;
           final availableHeight = constraints.maxHeight - headerHeight;
-          // 16 1-hour slots in [7,23) range
           const totalSlots = 16;
           final timeIntervalHeight = (availableHeight / totalSlots).clamp(
             40.0,
             120.0,
           );
 
-          return SfCalendar(
-            view: CalendarView.week,
-            firstDayOfWeek: 1, // Monday
-            timeSlotViewSettings: TimeSlotViewSettings(
-              startHour: 7,
-              endHour: 23,
-              timeFormat: 'HH:mm',
-              timeInterval: const Duration(minutes: 60),
-              timeIntervalHeight: timeIntervalHeight,
-            ),
-            dataSource: AppointmentDataSource(provider.appointments),
+          final effectiveBarberId = _selectedBarberId ?? (provider.barbers.isNotEmpty ? provider.barbers.first.id : null);
+          final filteredAppointments = provider.appointments.where((a) => a.barberId == effectiveBarberId).toList();
+
+          return Column(
+            children: [
+              if (provider.barbers.isNotEmpty)
+                Container(
+                  height: 60,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: provider.barbers.length,
+                    itemBuilder: (context, index) {
+                      final barber = provider.barbers[index];
+                      final isSelected = barber.id == effectiveBarberId;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: ChoiceChip(
+                          label: Text(barber.name),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            if (selected) {
+                              setState(() {
+                                _selectedBarberId = barber.id;
+                              });
+                            }
+                          },
+                          selectedColor: AppTheme.goldPrimary,
+                          labelStyle: TextStyle(
+                            color: isSelected ? Colors.black : Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          backgroundColor: AppTheme.bgField,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              Expanded(
+                child: SfCalendar(
+                  view: CalendarView.week,
+                  firstDayOfWeek: 1, // Monday
+                  timeSlotViewSettings: TimeSlotViewSettings(
+                    startHour: 7,
+                    endHour: 23,
+                    timeFormat: 'HH:mm',
+                    timeInterval: const Duration(minutes: 60),
+                    timeIntervalHeight: timeIntervalHeight,
+                  ),
+                  dataSource: AppointmentDataSource(filteredAppointments),
             allowDragAndDrop: true,
             dragAndDropSettings: const DragAndDropSettings(
               showTimeIndicator: true,
@@ -122,6 +161,9 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
             ),
             todayHighlightColor: AppTheme.goldPrimary,
             cellBorderColor: Colors.white24,
+          ),
+              ),
+            ],
           );
         },
       ),
