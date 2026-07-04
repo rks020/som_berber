@@ -226,9 +226,9 @@ const AppointmentsManager = () => {
           <p style={{ color: 'var(--text-muted)' }}>Berber bazlı haftalık taslak ve randevu yönetimi.</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button onClick={() => setCurrentDate(addDays(currentDate, -7))} style={{ background: 'var(--glass-bg)', padding: '8px 12px' }}>&lt;</button>
+          <button onClick={() => setCurrentDate(addDays(currentDate, -7))} style={{ background: 'var(--primary-color)', color: '#000', padding: '6px 12px' }}>&lt;</button>
           <span style={{ fontWeight: 'bold' }}>{format(weekStart, 'd MMM', { locale: tr })} - {format(addDays(weekStart, 6), 'd MMM yyyy', { locale: tr })}</span>
-          <button onClick={() => setCurrentDate(addDays(currentDate, 7))} style={{ background: 'var(--glass-bg)', padding: '8px 12px' }}>&gt;</button>
+          <button onClick={() => setCurrentDate(addDays(currentDate, 7))} style={{ background: 'var(--primary-color)', color: '#000', padding: '6px 12px' }}>&gt;</button>
         </div>
       </div>
       
@@ -239,11 +239,12 @@ const AppointmentsManager = () => {
             key={barber.id}
             onClick={() => setSelectedBarberId(barber.id)}
             style={{
-              background: selectedBarberId === barber.id ? 'var(--gold-primary)' : 'var(--glass-bg)',
-              color: selectedBarberId === barber.id ? '#000' : 'var(--text-light)',
+              background: selectedBarberId === barber.id ? 'var(--primary-color)' : 'transparent',
+              color: selectedBarberId === barber.id ? '#000' : 'var(--primary-color)',
               fontWeight: 'bold',
               border: selectedBarberId === barber.id ? 'none' : '1px solid rgba(255,255,255,0.1)',
-              padding: '12px 24px',
+              padding: '8px 16px',
+              fontSize: '0.85rem',
               borderRadius: '8px',
               cursor: 'pointer',
               whiteSpace: 'nowrap'
@@ -258,11 +259,11 @@ const AppointmentsManager = () => {
         <div className="glass-panel" style={{ padding: '0', overflowX: 'auto' }}>
           <div style={{ minWidth: '800px', display: 'grid', gridTemplateColumns: '50px repeat(7, 1fr)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
             {/* Header */}
-            <div style={{ padding: '8px', borderRight: '1px solid rgba(255,255,255,0.05)' }}></div>
+            <div style={{ padding: '4px', borderRight: '1px solid rgba(255,255,255,0.05)' }}></div>
             {days.map((day, i) => (
-              <div key={i} style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', color: 'var(--gold-primary)', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
-                <span style={{ fontSize: '0.8rem' }}>{format(day, 'EEE', { locale: tr })}</span><br/>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{format(day, 'd MMM', { locale: tr })}</span>
+              <div key={i} style={{ padding: '4px', textAlign: 'center', fontWeight: 'bold', color: 'var(--primary-color)', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
+                <span style={{ fontSize: '0.75rem' }}>{format(day, 'EEE', { locale: tr })}</span><br/>
+                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{format(day, 'd MMM', { locale: tr })}</span>
               </div>
             ))}
           </div>
