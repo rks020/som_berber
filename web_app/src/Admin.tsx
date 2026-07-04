@@ -303,7 +303,7 @@ const AppointmentsManager = () => {
             {/* Hours column */}
             <div style={{ width: '50px', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
               {hours.map(hour => (
-                <div key={hour} style={{ height: '48px', boxSizing: 'border-box', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '4px', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                <div key={hour} style={{ height: '36px', boxSizing: 'border-box', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '4px', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                   {hour.toString().padStart(2, '0')}:00
                 </div>
               ))}
@@ -338,7 +338,7 @@ const AppointmentsManager = () => {
                         setIsCategoryDropdownOpen(false);
                         setIsModalOpen(true); 
                       }}
-                      style={{ height: '48px', boxSizing: 'border-box', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }}
+                      style={{ height: '36px', boxSizing: 'border-box', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }}
                     />
                   ))}
                   
@@ -346,16 +346,16 @@ const AppointmentsManager = () => {
                   {dayApps.map(app => {
                     const appDate = parseISO(app.date_time);
                     const minutesFromStart = (appDate.getHours() - 8) * 60 + appDate.getMinutes();
-                    const top = (minutesFromStart / 60) * 48;
+                    const top = (minutesFromStart / 60) * 36;
                     const duration = app.duration_minutes || 60;
-                    const height = (duration / 60) * 48;
+                    const height = (duration / 60) * 36;
 
                     return (
                       <div 
                         key={app.id} 
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedSlot(null);
+                          setSelectedSlot({ date: appDate, hour: appDate.getHours() });
                           setEditingAppointmentId(app.id);
                           setNewTitle(app.title);
                           setNewDate(format(appDate, 'yyyy-MM-dd'));
