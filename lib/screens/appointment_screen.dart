@@ -51,13 +51,9 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
           final effectiveBarberId = _selectedBarberId ?? (provider.barbers.isNotEmpty ? provider.barbers.first.id : null);
           final filteredAppointments = provider.appointments.where((a) => a.barberId == effectiveBarberId).toList();
 
-          // Re-create data source when barber changes or on first load
-          if (_dataSource == null || _currentBarberId != effectiveBarberId) {
-            _currentBarberId = effectiveBarberId;
-            _dataSource = AppointmentDataSource(filteredAppointments);
-          } else {
-            _dataSource!.appointments = filteredAppointments;
-          }
+          // Re-create data source when barber changes or appointments change
+          _currentBarberId = effectiveBarberId;
+          _dataSource = AppointmentDataSource(filteredAppointments);
 
           return Column(
             children: [
@@ -96,7 +92,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                 ),
               Expanded(
                 child: SfCalendar(
-                  key: ValueKey(_currentBarberId),
+                  key: ValueKey('${effectiveBarberId}_${filteredAppointments.length}'),
                   view: CalendarView.week,
                   firstDayOfWeek: 1, // Monday
                   timeSlotViewSettings: TimeSlotViewSettings(
