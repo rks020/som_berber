@@ -385,7 +385,7 @@ const AppointmentsManager = () => {
                     top: '100%', 
                     left: 0, 
                     right: 0, 
-                    background: 'var(--bg-card)', 
+                    background: 'var(--surface-color)', 
                     border: '1px solid rgba(255,255,255,0.1)', 
                     borderRadius: '8px', 
                     marginTop: '4px',
