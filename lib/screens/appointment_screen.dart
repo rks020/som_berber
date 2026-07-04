@@ -16,6 +16,7 @@ class AppointmentScreen extends StatefulWidget {
 
 class _AppointmentScreenState extends State<AppointmentScreen> {
   String? _selectedBarberId;
+  String? _currentBarberId;
   AppointmentDataSource? _dataSource;
 
   @override
@@ -50,11 +51,12 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
           final effectiveBarberId = _selectedBarberId ?? (provider.barbers.isNotEmpty ? provider.barbers.first.id : null);
           final filteredAppointments = provider.appointments.where((a) => a.barberId == effectiveBarberId).toList();
 
-          if (_dataSource == null) {
+          // Re-create data source when barber changes or on first load
+          if (_dataSource == null || _currentBarberId != effectiveBarberId) {
+            _currentBarberId = effectiveBarberId;
             _dataSource = AppointmentDataSource(filteredAppointments);
           } else {
             _dataSource!.appointments = filteredAppointments;
-            _dataSource!.notifyListeners(CalendarDataSourceAction.reset, filteredAppointments);
           }
 
           return Column(
