@@ -39,8 +39,8 @@ class Customer {
       'name': name,
       'phone': phone,
       'notes': notes,
-      'createdAt': createdAt.toIso8601String(),
-      'profilePicturePath': profilePicturePath,
+      'created_at': createdAt.toIso8601String(),
+      'profile_picture_path': profilePicturePath,
     };
   }
 
@@ -50,8 +50,8 @@ class Customer {
       name: map['name'] as String,
       phone: map['phone'] as String,
       notes: (map['notes'] ?? '') as String,
-      createdAt: DateTime.parse(map['createdAt'] as String),
-      profilePicturePath: map['profilePicturePath'] as String?,
+      createdAt: DateTime.parse(map['created_at'] as String),
+      profilePicturePath: map['profile_picture_path'] as String?,
     );
   }
 }

@@ -111,15 +111,26 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                     notes: notes,
                     createdAt: DateTime.now(),
                   );
-                  await provider.addCustomer(newCustomer);
-                  if (mounted) {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('$name eklendi'),
-                        backgroundColor: AppTheme.goldDark,
-                      ),
-                    );
+                  try {
+                    await provider.addCustomer(newCustomer);
+                    if (mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('$name eklendi'),
+                          backgroundColor: AppTheme.goldDark,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Hata: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
                   }
                 }
               },

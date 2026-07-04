@@ -188,6 +188,7 @@ const CustomersManager = () => {
   const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
+  const [newNotes, setNewNotes] = useState('');
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
@@ -207,9 +208,10 @@ const CustomersManager = () => {
     
     setAdding(true);
     const id = crypto.randomUUID();
-    await supabase.from('customers').insert({ id, name: newName, phone: newPhone });
+    await supabase.from('customers').insert({ id, name: newName, phone: newPhone, notes: newNotes });
     setNewName('');
     setNewPhone('');
+    setNewNotes('');
     await fetchData();
     setAdding(false);
   };
@@ -236,6 +238,10 @@ const CustomersManager = () => {
           <div style={{ flex: 1 }}>
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Telefon</label>
             <input type="tel" value={newPhone} onChange={e => setNewPhone(e.target.value)} required placeholder="05XX XXX XX XX" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.9rem', color: 'var(--text-muted)' }}>Not / Tercih</label>
+            <input type="text" value={newNotes} onChange={e => setNewNotes(e.target.value)} placeholder="Örn: Yanlar 3 numara" />
           </div>
           <button type="submit" disabled={adding} style={{ padding: '12px 24px', height: '45px' }}>
             {adding ? 'Ekleniyor...' : 'Ekle'}
