@@ -74,7 +74,7 @@ class AppointmentModel {
       id: map['id'] as String,
       title: map['title'] as String,
       category: map['category'] as String,
-      dateTime: DateTime.parse(map['dateTime'] ?? map['date_time'] as String),
+      dateTime: DateTime.parse(map['dateTime'] ?? map['date_time'] as String).toLocal(),
       durationMinutes: (map['duration_minutes'] ?? map['durationMinutes'] ?? 60 as num).toInt(),
       price: (map['price'] as num).toDouble(),
       additionalPeople: (map['additional_people'] ?? map['additionalPeople'] ?? '') as String,

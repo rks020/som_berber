@@ -16,6 +16,7 @@ class AppointmentScreen extends StatefulWidget {
 
 class _AppointmentScreenState extends State<AppointmentScreen> {
   String? _selectedBarberId;
+  AppointmentDataSource? _dataSource;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +28,10 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () => _showAppointmentDialog(context, null, null),
+            onPressed: () {
+              final effectiveBarberId = _selectedBarberId ?? (provider.barbers.isNotEmpty ? provider.barbers.first.id : null);
+              _showAppointmentDialog(context, null, null, effectiveBarberId);
+            },
             tooltip: 'Yeni Randevu',
           ),
         ],
@@ -45,6 +49,13 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
 
           final effectiveBarberId = _selectedBarberId ?? (provider.barbers.isNotEmpty ? provider.barbers.first.id : null);
           final filteredAppointments = provider.appointments.where((a) => a.barberId == effectiveBarberId).toList();
+
+          if (_dataSource == null) {
+            _dataSource = AppointmentDataSource(filteredAppointments);
+          } else {
+            _dataSource!.appointments = filteredAppointments;
+            _dataSource!.notifyListeners(CalendarDataSourceAction.reset, filteredAppointments);
+          }
 
           return Column(
             children: [
@@ -83,7 +94,6 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                 ),
               Expanded(
                 child: SfCalendar(
-                  key: ValueKey(effectiveBarberId),
                   view: CalendarView.week,
                   firstDayOfWeek: 1, // Monday
                   timeSlotViewSettings: TimeSlotViewSettings(
@@ -93,7 +103,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                     timeInterval: const Duration(minutes: 60),
                     timeIntervalHeight: timeIntervalHeight,
                   ),
-                  dataSource: AppointmentDataSource(filteredAppointments),
+                  dataSource: _dataSource,
             allowDragAndDrop: true,
             dragAndDropSettings: const DragAndDropSettings(
               showTimeIndicator: true,
@@ -136,11 +146,11 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                   details.appointments != null &&
                   details.appointments!.isNotEmpty) {
                 final appt = details.appointments!.first as AppointmentModel;
-                _showAppointmentDialog(context, appt, appt.dateTime);
+                _showAppointmentDialog(context, appt, appt.dateTime, effectiveBarberId);
               } else if (details.targetElement ==
                   CalendarElement.calendarCell) {
                 final DateTime date = details.date ?? DateTime.now();
-                _showAppointmentDialog(context, null, date);
+                _showAppointmentDialog(context, null, date, effectiveBarberId);
               }
             },
             // Theme customization for dark theme
@@ -176,6 +186,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
     BuildContext context,
     AppointmentModel? existing,
     DateTime? initialDate,
+    String? barberId,
   ) {
     showDialog(
       context: context,
@@ -183,6 +194,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
         return _AppointmentDialog(
           existingAppointment: existing,
           initialDate: initialDate,
+          barberId: barberId,
         );
       },
     );
@@ -192,8 +204,9 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
 class _AppointmentDialog extends StatefulWidget {
   final AppointmentModel? existingAppointment;
   final DateTime? initialDate;
+  final String? barberId;
 
-  const _AppointmentDialog({this.existingAppointment, this.initialDate});
+  const _AppointmentDialog({this.existingAppointment, this.initialDate, this.barberId});
 
   @override
   State<_AppointmentDialog> createState() => _AppointmentDialogState();
@@ -333,6 +346,7 @@ class _AppointmentDialogState extends State<_AppointmentDialog> {
         price: double.tryParse(_priceController.text.trim()) ?? 0.0,
         additionalPeople: _additionalPeopleController.text.trim(),
         colorHex: _selectedColorHex,
+        barberId: widget.barberId,
       );
 
       if (widget.existingAppointment != null) {
