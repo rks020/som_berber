@@ -71,15 +71,15 @@ class AppointmentModel {
 
   factory AppointmentModel.fromMap(Map<dynamic, dynamic> map) {
     return AppointmentModel(
-      id: map['id'] as String,
-      title: map['title'] as String,
-      category: map['category'] as String,
-      dateTime: DateTime.parse(map['dateTime'] ?? map['date_time'] as String).toLocal(),
+      id: (map['id'] ?? '') as String,
+      title: (map['title'] ?? '') as String,
+      category: (map['category'] ?? '') as String,
+      dateTime: DateTime.tryParse(map['dateTime'] ?? map['date_time'] ?? '')?.toLocal() ?? DateTime.now(),
       durationMinutes: (map['duration_minutes'] ?? map['durationMinutes'] ?? 60 as num).toInt(),
-      price: (map['price'] as num).toDouble(),
+      price: ((map['price'] ?? 0.0) as num).toDouble(),
       additionalPeople: (map['additional_people'] ?? map['additionalPeople'] ?? '') as String,
       colorHex: (map['color_hex'] ?? map['colorHex'] ?? '#4CAF50') as String,
-      status: map['status'] as String? ?? 'onaylandı',
+      status: (map['status'] ?? 'onaylandı') as String,
       customerId: map['customer_id'] as String?,
       barberId: map['barber_id'] as String?,
     );

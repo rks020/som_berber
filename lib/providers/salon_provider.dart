@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/customer.dart';
@@ -6,6 +7,7 @@ import '../models/service.dart';
 import '../models/visit.dart';
 import '../models/appointment.dart';
 import '../services/notification_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SalonProvider extends ChangeNotifier {
   final _supabase = Supabase.instance.client;
@@ -126,6 +128,22 @@ class SalonProvider extends ChangeNotifier {
           schema: 'public',
           table: 'appointments',
           callback: (payload) {
+            debugPrint('Realtime Event received: ${payload.eventType}');
+            AppointmentModel? oldApp;
+            if (payload.eventType == PostgresChangeEvent.update) {
+              final newRecord = payload.newRecord;
+              if (newRecord != null) {
+                final app = AppointmentModel.fromMap(newRecord);
+                try {
+                  oldApp = _appointments.firstWhere((a) => a.id == app.id);
+                  debugPrint('Found oldApp: ${oldApp.id}, status: ${oldApp.status}');
+                } catch (e) {
+                  debugPrint('Failed to find oldApp: $e');
+                  oldApp = null;
+                }
+              }
+            }
+
             _fetchInitialData().then((_) {
               notifyListeners();
 
@@ -135,15 +153,63 @@ class SalonProvider extends ChangeNotifier {
                 if (newRecord != null) {
                   final app = AppointmentModel.fromMap(newRecord);
                   if (app.status == 'bekliyor') {
-                    // Trigger immediate local notification
-                    NotificationService().showImmediateNotification(
-                      app.id.hashCode,
-                      '🔔 Yeni Randevu Talebi!',
-                      '${app.title} - ${app.category} için onay bekliyor.',
-                    );
-                    pendingRequestNotification = app;
-                    _unreadRequestsCount++;
-                    notifyListeners();
+                    SharedPreferences.getInstance().then((prefs) {
+                      final savedCustomerId = prefs.getString('saved_customer_id');
+                      debugPrint('Insert event: savedCustomerId=$savedCustomerId');
+                      if (savedCustomerId == null) {
+                        // Trigger immediate local notification for admin
+                        NotificationService().showImmediateNotification(
+                          app.id.hashCode,
+                          '🔔 Yeni Randevu Talebi!',
+                          '${app.title} - ${app.category} için onay bekliyor.',
+                        );
+                        pendingRequestNotification = app;
+                        _unreadRequestsCount++;
+                        notifyListeners();
+                      }
+                    });
+                  }
+                }
+              }
+
+              // Check if it's an update where appointment got approved or has new hour suggested
+              if (payload.eventType == PostgresChangeEvent.update) {
+                final newRecord = payload.newRecord;
+                if (newRecord != null) {
+                  final app = AppointmentModel.fromMap(newRecord);
+                  debugPrint('Update event: app.id=${app.id}, app.status=${app.status}');
+                  
+                  if (oldApp != null) {
+                    debugPrint('Comparing oldApp status (${oldApp.status}) vs new status (${app.status})');
+                    if (oldApp.status != 'onaylandı' && app.status == 'onaylandı') {
+                      SharedPreferences.getInstance().then((prefs) {
+                        final savedCustomerId = prefs.getString('saved_customer_id');
+                        debugPrint('Notification check: savedCustomerId=$savedCustomerId, app.customerId=${app.customerId}');
+                        if (savedCustomerId != null && savedCustomerId == app.customerId) {
+                          debugPrint('Triggering approved notification!');
+                          NotificationService().showImmediateNotification(
+                            app.id.hashCode,
+                            '📅 Randevunuz Onaylandı!',
+                            '${app.category} randevu talebiniz berber tarafından onaylandı.',
+                          );
+                        }
+                      });
+                    } else if (oldApp.status != 'saat_onerildi' && app.status == 'saat_onerildi') {
+                      SharedPreferences.getInstance().then((prefs) {
+                        final savedCustomerId = prefs.getString('saved_customer_id');
+                        debugPrint('Notification check: savedCustomerId=$savedCustomerId, app.customerId=${app.customerId}');
+                        if (savedCustomerId != null && savedCustomerId == app.customerId) {
+                          debugPrint('Triggering new time notification!');
+                          NotificationService().showImmediateNotification(
+                            app.id.hashCode,
+                            '⏰ Yeni Saat Önerisi',
+                            'Berberiniz randevu için yeni bir saat önerdi. Kontrol etmek için tıklayın.',
+                          );
+                        }
+                      });
+                    }
+                  } else {
+                    debugPrint('oldApp was null, cannot compare status change.');
                   }
                 }
               }
@@ -190,13 +256,74 @@ class SalonProvider extends ChangeNotifier {
     await _supabase.from('customers').delete().eq('id', id);
   }
 
+  // --- STORAGE OPERATIONS ---
+  Future<String?> uploadBarberPhoto(String barberId, String localPath) async {
+    try {
+      final file = File(localPath);
+      if (!await file.exists()) return null;
+
+      final extension = localPath.split('.').last;
+      final storagePath = 'barbers/$barberId.$extension';
+
+      await _supabase.storage.from('photos').upload(
+        storagePath,
+        file,
+        fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+      );
+
+      final publicUrl = _supabase.storage.from('photos').getPublicUrl(storagePath);
+      return publicUrl;
+    } catch (e) {
+      debugPrint('Error uploading barber photo: $e');
+      return null;
+    }
+  }
+
+  Future<String?> uploadVisitPhoto(String visitId, String localPath) async {
+    try {
+      final file = File(localPath);
+      if (!await file.exists()) return null;
+
+      final extension = localPath.split('.').last;
+      final storagePath = 'visits/$visitId.$extension';
+
+      await _supabase.storage.from('photos').upload(
+        storagePath,
+        file,
+        fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+      );
+
+      final publicUrl = _supabase.storage.from('photos').getPublicUrl(storagePath);
+      return publicUrl;
+    } catch (e) {
+      debugPrint('Error uploading visit photo: $e');
+      return null;
+    }
+  }
+
   // --- BARBER OPERATIONS ---
   Future<void> addBarber(Barber barber) async {
-    await _supabase.from('barbers').insert(barber.toMap());
+    String? finalPath = barber.profilePicturePath;
+    if (finalPath != null && !finalPath.startsWith('http')) {
+      final uploadedUrl = await uploadBarberPhoto(barber.id, finalPath);
+      if (uploadedUrl != null) {
+        finalPath = uploadedUrl;
+      }
+    }
+    final updated = barber.copyWith(profilePicturePath: finalPath);
+    await _supabase.from('barbers').insert(updated.toMap());
   }
 
   Future<void> updateBarber(Barber barber) async {
-    await _supabase.from('barbers').update(barber.toMap()).eq('id', barber.id);
+    String? finalPath = barber.profilePicturePath;
+    if (finalPath != null && !finalPath.startsWith('http')) {
+      final uploadedUrl = await uploadBarberPhoto(barber.id, finalPath);
+      if (uploadedUrl != null) {
+        finalPath = uploadedUrl;
+      }
+    }
+    final updated = barber.copyWith(profilePicturePath: finalPath);
+    await _supabase.from('barbers').update(updated.toMap()).eq('id', barber.id);
   }
 
   Future<void> deleteBarber(String id) async {
@@ -218,11 +345,27 @@ class SalonProvider extends ChangeNotifier {
 
   // --- VISIT OPERATIONS ---
   Future<void> addVisit(Visit visit) async {
-    await _supabase.from('visits').insert(visit.toMap());
+    String? finalPath = visit.photoPath;
+    if (finalPath != null && !finalPath.startsWith('http')) {
+      final uploadedUrl = await uploadVisitPhoto(visit.id, finalPath);
+      if (uploadedUrl != null) {
+        finalPath = uploadedUrl;
+      }
+    }
+    final updated = visit.copyWith(photoPath: finalPath);
+    await _supabase.from('visits').insert(updated.toMap());
   }
 
   Future<void> updateVisit(Visit visit) async {
-    await _supabase.from('visits').update(visit.toMap()).eq('id', visit.id);
+    String? finalPath = visit.photoPath;
+    if (finalPath != null && !finalPath.startsWith('http')) {
+      final uploadedUrl = await uploadVisitPhoto(visit.id, finalPath);
+      if (uploadedUrl != null) {
+        finalPath = uploadedUrl;
+      }
+    }
+    final updated = visit.copyWith(photoPath: finalPath);
+    await _supabase.from('visits').update(updated.toMap()).eq('id', visit.id);
   }
 
   Future<void> deleteVisit(String id) async {

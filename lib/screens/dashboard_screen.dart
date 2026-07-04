@@ -21,6 +21,8 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   bool _isTodayVisitsExpanded = true;
+  bool _isTodayAppointmentsExpanded = true;
+  bool _isPendingAppointmentsExpanded = true;
 
   @override
   Widget build(BuildContext context) {
@@ -262,147 +264,157 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 24),
 
                 // 4. Today's Appointments
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildSectionTitle(
-                      'Bugünkü Randevular (${todayAppointments.length})',
-                    ),
-                    if (todayAppointments.isNotEmpty)
-                      const Icon(
-                        Icons.calendar_month,
-                        color: AppTheme.goldMedium,
-                        size: 18,
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isTodayAppointmentsExpanded = !_isTodayAppointmentsExpanded;
+                    });
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildSectionTitle(
+                        'Bugünkü Randevular (${todayAppointments.length})',
                       ),
-                  ],
+                      Icon(
+                        _isTodayAppointmentsExpanded ? Icons.expand_less : Icons.expand_more,
+                        color: AppTheme.goldMedium,
+                        size: 20,
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 12),
-                if (todayAppointments.isEmpty)
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 32),
-                    decoration: BoxDecoration(
-                      color: AppTheme.bgCard,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFF222222)),
-                    ),
-                    child: const Column(
-                      children: [
-                        Icon(
-                          Icons.calendar_today,
-                          color: Colors.grey,
-                          size: 40,
-                        ),
-                        SizedBox(height: 10),
-                        Text(
-                          'Bugün için randevu bulunmuyor.',
-                          style: TextStyle(color: Colors.grey, fontSize: 13),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: todayAppointments.length > 5
-                        ? 5
-                        : todayAppointments.length,
-                    itemBuilder: (context, index) {
-                      final appt = todayAppointments[index];
-                      return GestureDetector(
-                        onTap: () => _showCompleteAppointmentSheet(context, appt),
-                        child: Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppTheme.bgCard,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.white10),
-                        ),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 12,
-                              height: 12,
-                              decoration: BoxDecoration(
-                                color: Color(
-                                  int.parse(
-                                    'FF${appt.colorHex.replaceAll('#', '')}',
-                                    radix: 16,
-                                  ),
-                                ),
-                                shape: BoxShape.circle,
-                              ),
+                if (_isTodayAppointmentsExpanded) ...[
+                  const SizedBox(height: 12),
+                  if (todayAppointments.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 32),
+                      decoration: BoxDecoration(
+                        color: AppTheme.bgCard,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFF222222)),
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(
+                            Icons.calendar_today,
+                            color: Colors.grey,
+                            size: 40,
+                          ),
+                          SizedBox(height: 10),
+                          Text(
+                            'Bugün için randevu bulunmuyor.',
+                            style: TextStyle(color: Colors.grey, fontSize: 13),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: todayAppointments.length > 5
+                          ? 5
+                          : todayAppointments.length,
+                      itemBuilder: (context, index) {
+                        final appt = todayAppointments[index];
+                        return GestureDetector(
+                          onTap: () => _showCompleteAppointmentSheet(context, appt),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: AppTheme.bgCard,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.white10),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  RichText(
-                                    text: TextSpan(
-                                      children: [
-                                        TextSpan(
-                                          text: appt.title,
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        TextSpan(
-                                          text: ' (${provider.barbers.firstWhere((b) => b.id == appt.barberId, orElse: () => Barber(id: '', name: 'Bilinmiyor', phone: '')).name})',
-                                          style: const TextStyle(
-                                            color: AppTheme.goldMedium,
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    appt.category,
-                                    style: const TextStyle(
-                                      color: AppTheme.textMuted,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
+                            child: Row(
                               children: [
-                                Text(
-                                  DateFormat('HH:mm').format(appt.dateTime),
-                                  style: const TextStyle(
-                                    color: AppTheme.goldPrimary,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
+                                Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: Color(
+                                      int.parse(
+                                        'FF${appt.colorHex.replaceAll('#', '')}',
+                                        radix: 16,
+                                      ),
+                                    ),
+                                    shape: BoxShape.circle,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${appt.durationMinutes} dk',
-                                  style: const TextStyle(
-                                    color: AppTheme.textMuted,
-                                    fontSize: 12,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      RichText(
+                                        text: TextSpan(
+                                          children: [
+                                            TextSpan(
+                                              text: appt.title,
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 16,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                            TextSpan(
+                                              text: ' (${provider.barbers.firstWhere((b) => b.id == appt.barberId, orElse: () => Barber(id: '', name: 'Bilinmiyor', phone: '')).name})',
+                                              style: const TextStyle(
+                                                color: AppTheme.goldMedium,
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        appt.category,
+                                        style: const TextStyle(
+                                          color: AppTheme.textMuted,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      DateFormat('HH:mm').format(appt.dateTime),
+                                      style: const TextStyle(
+                                        color: AppTheme.goldPrimary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${appt.durationMinutes} dk',
+                                      style: const TextStyle(
+                                        color: AppTheme.textMuted,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(width: 8),
+                                const Icon(Icons.chevron_right, color: AppTheme.textMuted, size: 20),
                               ],
                             ),
-                            const SizedBox(width: 8),
-                            const Icon(Icons.chevron_right, color: AppTheme.textMuted, size: 20),
-                          ],
-                        ),
-                      ));
-                    },
-                  ),
+                          ),
+                        );
+                      },
+                    ),
+                ],
                 const SizedBox(height: 24),
 
                 // 5. Today's visits
@@ -459,111 +471,154 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       },
                     ),
                 ],
-                const SizedBox(height: 24),
-
-                // 6. Pending Appointments
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildSectionTitle(
-                      'Bekleyen Randevular (${provider.appointments.where((a) => a.status == 'bekliyor').length})',
-                    ),
-                    const Icon(
-                      Icons.pending_actions,
-                      color: AppTheme.goldMedium,
-                      size: 18,
-                    ),
-                  ],
+                                // 6. Pending Appointments
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isPendingAppointmentsExpanded = !_isPendingAppointmentsExpanded;
+                    });
+                  },
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildSectionTitle(
+                        'Bekleyen Randevular (${provider.appointments.where((a) => a.status == 'bekliyor').length})',
+                      ),
+                      Icon(
+                        _isPendingAppointmentsExpanded ? Icons.expand_less : Icons.expand_more,
+                        color: AppTheme.goldMedium,
+                        size: 20,
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 12),
-                (() {
-                  final pendingApps = provider.appointments.where((a) => a.status == 'bekliyor').toList();
-                  if (pendingApps.isEmpty) {
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 32),
-                      decoration: BoxDecoration(
-                        color: AppTheme.bgCard,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFF222222)),
-                      ),
-                      child: const Column(
-                        children: [
-                          Icon(Icons.hourglass_empty, color: Colors.grey, size: 40),
-                          SizedBox(height: 10),
-                          Text(
-                            'Bekleyen randevu talebi bulunmuyor.',
-                            style: TextStyle(color: Colors.grey, fontSize: 13),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  return ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: pendingApps.length,
-                    itemBuilder: (context, index) {
-                      final appt = pendingApps[index];
-                      final barberName = provider.barbers.firstWhere(
-                        (b) => b.id == appt.barberId,
-                        orElse: () => Barber(id: '', name: 'Bilinmiyor', phone: ''),
-                      ).name;
+                if (_isPendingAppointmentsExpanded) ...[
+                  const SizedBox(height: 12),
+                  (() {
+                    final pendingApps = provider.appointments.where((a) => a.status == 'bekliyor').toList();
+                    if (pendingApps.isEmpty) {
                       return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 32),
                         decoration: BoxDecoration(
                           color: AppTheme.bgCard,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.2)),
+                          border: Border.all(color: const Color(0xFF222222)),
                         ),
-                        child: Row(
+                        child: const Column(
                           children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    appt.title,
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${appt.category}  •  Berber: $barberName',
-                                    style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    DateFormat('dd MMM yyyy HH:mm', 'tr_TR').format(appt.dateTime),
-                                    style: const TextStyle(color: AppTheme.goldMedium, fontSize: 12),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.close, color: Colors.red),
-                                  onPressed: () => provider.deleteAppointment(appt.id),
-                                  tooltip: 'Reddet',
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.check, color: Colors.green),
-                                  onPressed: () {
-                                    final approved = appt.copyWith(status: 'onaylandı');
-                                    provider.updateAppointment(approved);
-                                  },
-                                  tooltip: 'Onayla',
-                                ),
-                              ],
+                            Icon(Icons.hourglass_empty, color: Colors.grey, size: 40),
+                            SizedBox(height: 10),
+                            Text(
+                              'Bekleyen randevu talebi bulunmuyor.',
+                              style: TextStyle(color: Colors.grey, fontSize: 13),
                             ),
                           ],
                         ),
                       );
-                    },
-                  );
-                })(),
+                    }
+                    return ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: pendingApps.length,
+                      itemBuilder: (context, index) {
+                        final appt = pendingApps[index];
+                        final barberName = provider.barbers.firstWhere(
+                          (b) => b.id == appt.barberId,
+                          orElse: () => Barber(id: '', name: 'Bilinmiyor', phone: ''),
+                        ).name;
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppTheme.bgCard,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.2)),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      appt.title,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${appt.category}  •  Berber: $barberName',
+                                      style: const TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      DateFormat('dd MMM yyyy HH:mm', 'tr_TR').format(appt.dateTime),
+                                      style: const TextStyle(color: AppTheme.goldMedium, fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.close, color: Colors.red),
+                                    onPressed: () => provider.deleteAppointment(appt.id),
+                                    tooltip: 'Reddet',
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.more_time, color: Colors.orange),
+                                    onPressed: () async {
+                                      final selectedDate = await showDatePicker(
+                                        context: context,
+                                        initialDate: appt.dateTime,
+                                        firstDate: DateTime.now(),
+                                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                                        locale: const Locale('tr', 'TR'),
+                                      );
+                                      if (selectedDate == null) return;
+
+                                      if (!context.mounted) return;
+                                      final selectedTime = await showTimePicker(
+                                        context: context,
+                                        initialTime: TimeOfDay.fromDateTime(appt.dateTime),
+                                      );
+                                      if (selectedTime == null) return;
+
+                                      final newDateTime = DateTime(
+                                        selectedDate.year,
+                                        selectedDate.month,
+                                        selectedDate.day,
+                                        selectedTime.hour,
+                                        selectedTime.minute,
+                                      );
+
+                                      final updated = appt.copyWith(
+                                        dateTime: newDateTime,
+                                        status: 'saat_onerildi',
+                                      );
+                                      provider.updateAppointment(updated);
+                                    },
+                                    tooltip: 'Yeni Saat Öner',
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.check, color: Colors.green),
+                                    onPressed: () {
+                                      final approved = appt.copyWith(status: 'onaylandı');
+                                      provider.updateAppointment(approved);
+                                    },
+                                    tooltip: 'Onayla',
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  })(),
+                ],
                 const SizedBox(height: 20),
               ],
             ),

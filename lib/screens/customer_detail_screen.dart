@@ -494,12 +494,19 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                             children: [
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(12),
-                                child: Image.file(
-                                  File(latestVisit!.photoPath!),
-                                  width: double.infinity,
-                                  height: 220,
-                                  fit: BoxFit.cover,
-                                ),
+                                child: latestVisit!.photoPath!.startsWith('http')
+                                    ? Image.network(
+                                        latestVisit.photoPath!,
+                                        width: double.infinity,
+                                        height: 220,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Image.file(
+                                        File(latestVisit.photoPath!),
+                                        width: double.infinity,
+                                        height: 220,
+                                        fit: BoxFit.cover,
+                                      ),
                               ),
                               Positioned(
                                 top: 8,
@@ -749,11 +756,17 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                           padding: const EdgeInsets.only(bottom: 12.0),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.file(
-                              File(visit.photoPath!),
-                              height: 200,
-                              fit: BoxFit.cover,
-                            ),
+                            child: visit.photoPath!.startsWith('http')
+                                ? Image.network(
+                                    visit.photoPath!,
+                                    height: 200,
+                                    fit: BoxFit.cover,
+                                  )
+                                : Image.file(
+                                    File(visit.photoPath!),
+                                    height: 200,
+                                    fit: BoxFit.cover,
+                                  ),
                           ),
                         ),
                       if (index == 0) // Only for the latest visit

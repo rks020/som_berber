@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useParams, useLocation } from 'react-router-dom';
-import { Scissors, Calendar, Clock, User, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Scissors, User, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { format, addDays, startOfDay, isSameDay } from 'date-fns';
 import { tr } from 'date-fns/locale';
@@ -35,7 +35,7 @@ const Home = () => {
 
   useEffect(() => {
     const fetchBarbers = async () => {
-      const { data, error } = await supabase.from('barbers').select('*');
+      const { data } = await supabase.from('barbers').select('*');
       if (data) setBarbers(data);
       setLoading(false);
     };

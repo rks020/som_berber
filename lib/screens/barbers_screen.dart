@@ -386,7 +386,7 @@ class BarbersScreen extends StatelessWidget {
                 );
                 final int servicesCount = barberVisits.fold(
                   0,
-                  (sum, v) => sum + v.serviceIds.length,
+                  (sum, v) => sum + (v.serviceNames.isNotEmpty ? v.serviceNames.length : 1),
                 );
 
                 return Card(
@@ -416,9 +416,9 @@ class BarbersScreen extends StatelessWidget {
                                         .withOpacity(0.2),
                                     backgroundImage:
                                         barber.profilePicturePath != null
-                                        ? FileImage(
-                                            File(barber.profilePicturePath!),
-                                          )
+                                        ? (barber.profilePicturePath!.startsWith('http')
+                                            ? NetworkImage(barber.profilePicturePath!) as ImageProvider
+                                            : FileImage(File(barber.profilePicturePath!)))
                                         : null,
                                     child: barber.profilePicturePath == null
                                         ? Text(

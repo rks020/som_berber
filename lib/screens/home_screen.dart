@@ -62,6 +62,43 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               child: const Text('Reddet', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
             ),
+            TextButton(
+              onPressed: () async {
+                final selectedDate = await showDatePicker(
+                  context: context,
+                  initialDate: app.dateTime,
+                  firstDate: DateTime.now(),
+                  lastDate: DateTime.now().add(const Duration(days: 365)),
+                  locale: const Locale('tr', 'TR'),
+                );
+                if (selectedDate == null) return;
+
+                if (!context.mounted) return;
+                final selectedTime = await showTimePicker(
+                  context: context,
+                  initialTime: TimeOfDay.fromDateTime(app.dateTime),
+                );
+                if (selectedTime == null) return;
+
+                final newDateTime = DateTime(
+                  selectedDate.year,
+                  selectedDate.month,
+                  selectedDate.day,
+                  selectedTime.hour,
+                  selectedTime.minute,
+                );
+
+                setState(() => _isDialogShowing = false);
+                final updated = app.copyWith(
+                  dateTime: newDateTime,
+                  status: 'saat_onerildi',
+                );
+                await provider.updateAppointment(updated);
+                provider.clearPendingRequestNotification();
+                if (context.mounted) Navigator.pop(context);
+              },
+              child: const Text('Saat Öner', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+            ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
               onPressed: () async {

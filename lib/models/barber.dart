@@ -30,7 +30,7 @@ class Barber {
       'id': id,
       'name': name,
       'phone': phone,
-      'profilePicturePath': profilePicturePath,
+      'profile_picture_path': profilePicturePath,
     };
   }
 
@@ -39,7 +39,7 @@ class Barber {
       id: map['id'] as String,
       name: map['name'] as String,
       phone: map['phone'] as String,
-      profilePicturePath: map['profilePicturePath'] as String?,
+      profilePicturePath: (map['profile_picture_path'] ?? map['profilePicturePath']) as String?,
     );
   }
 }

@@ -34,6 +34,7 @@ interface Appointment {
   duration_minutes: number;
   color_hex: string;
   price: number;
+  additional_people?: string;
 }
 
 const AdminLogin = ({ onLogin }: { onLogin: () => void }) => {
@@ -139,7 +140,7 @@ const Sidebar = ({ onLogout, unreadCount }: { onLogout: () => void, unreadCount:
   );
 };
 
-import { startOfWeek, addDays, getHours, getDay } from 'date-fns';
+import { startOfWeek, addDays } from 'date-fns';
 
 const AppointmentsManager = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -174,6 +175,20 @@ const AppointmentsManager = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [pendingRequest, setPendingRequest] = useState<Appointment | null>(null);
+  const [isSuggestingNewTime, setIsSuggestingNewTime] = useState(false);
+  const [suggestedDateTime, setSuggestedDateTime] = useState('');
+
+  const handleSuggestNewTime = async () => {
+    if (!pendingRequest || !suggestedDateTime) return;
+    const isoDateTime = new Date(suggestedDateTime).toISOString();
+    await supabase.from('appointments').update({
+      date_time: isoDateTime,
+      status: 'saat_onerildi'
+    }).eq('id', pendingRequest.id);
+    setPendingRequest(null);
+    setIsSuggestingNewTime(false);
+    fetchData();
+  };
 
   const handleApprovePending = async () => {
     if (!pendingRequest) return;
@@ -302,15 +317,7 @@ const AppointmentsManager = () => {
 
   const filteredAppointments = appointments.filter(a => a.barber_id === selectedBarberId);
 
-  const getAppointmentsForSlot = (date: Date, hour: number) => {
-    return filteredAppointments.filter(app => {
-      const appDate = parseISO(app.date_time);
-      return appDate.getDate() === date.getDate() &&
-             appDate.getMonth() === date.getMonth() &&
-             appDate.getFullYear() === date.getFullYear() &&
-             appDate.getHours() === hour;
-    });
-  };
+
 
   return (
     <div>
@@ -677,7 +684,15 @@ const AppointmentsManager = () => {
 
       {/* Pending Request Modal */}
       {pendingRequest && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000, padding: '20px' }}>
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setPendingRequest(null);
+              setIsSuggestingNewTime(false);
+            }
+          }}
+          style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000, padding: '20px' }}
+        >
           <div className="glass-panel" style={{ width: '400px', padding: '24px', border: '1px solid var(--primary-color)' }}>
             <h2 style={{ color: 'var(--primary-color)', marginBottom: '16px', textAlign: 'center' }}>🔔 Yeni Randevu Talebi!</h2>
             <div style={{ background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '8px', marginBottom: '24px' }}>
@@ -686,14 +701,47 @@ const AppointmentsManager = () => {
               <p style={{ margin: '8px 0' }}><strong>Tarih/Saat:</strong> {new Date(pendingRequest.date_time).toLocaleString('tr-TR')}</p>
               {pendingRequest.price > 0 && <p style={{ margin: '8px 0' }}><strong>Ücret:</strong> {pendingRequest.price} ₺</p>}
             </div>
-            <div style={{ display: 'flex', gap: '16px' }}>
-              <button onClick={handleRejectPending} style={{ flex: 1, background: '#f44336', color: 'white', fontWeight: 'bold', padding: '12px' }}>
-                Reddet
-              </button>
-              <button onClick={handleApprovePending} style={{ flex: 1, background: '#4caf50', color: 'black', fontWeight: 'bold', padding: '12px' }}>
-                Onayla
-              </button>
-            </div>
+            
+            {isSuggestingNewTime ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <label style={{ display: 'block', marginBottom: '4px', color: 'var(--primary-color)', fontWeight: 'bold' }}>Yeni Tarih/Saat Önerin:</label>
+                <input 
+                  type="datetime-local" 
+                  value={suggestedDateTime} 
+                  onChange={e => setSuggestedDateTime(e.target.value)} 
+                  style={{ width: '100%', padding: '10px', borderRadius: '4px', background: '#222', color: 'white', border: '1px solid var(--primary-color)' }}
+                />
+                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                  <button onClick={() => setIsSuggestingNewTime(false)} style={{ flex: 1, background: 'rgba(255,255,255,0.1)', color: 'white', padding: '10px' }}>
+                    İptal
+                  </button>
+                  <button onClick={handleSuggestNewTime} style={{ flex: 1, background: '#ff9800', color: 'black', fontWeight: 'bold', padding: '10px' }}>
+                    Öneriyi Gönder
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                <button onClick={handleRejectPending} style={{ flex: 1, background: '#f44336', color: 'white', fontWeight: 'bold', padding: '12px', minWidth: '80px' }}>
+                  Reddet
+                </button>
+                <button 
+                  onClick={() => {
+                    const localDt = new Date(pendingRequest.date_time);
+                    const tzOffset = localDt.getTimezoneOffset() * 60000;
+                    const localISOTime = new Date(localDt.getTime() - tzOffset).toISOString().slice(0, 16);
+                    setSuggestedDateTime(localISOTime);
+                    setIsSuggestingNewTime(true);
+                  }} 
+                  style={{ flex: 1.5, background: '#ff9800', color: 'black', fontWeight: 'bold', padding: '12px', minWidth: '120px' }}
+                >
+                  Yeni Saat Öner
+                </button>
+                <button onClick={handleApprovePending} style={{ flex: 1, background: '#4caf50', color: 'black', fontWeight: 'bold', padding: '12px', minWidth: '80px' }}>
+                  Onayla
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1151,6 +1199,9 @@ const RequestsManager = () => {
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [suggestingRequestId, setSuggestingRequestId] = useState<string | null>(null);
+  const [suggestedDateTimeList, setSuggestedDateTimeList] = useState('');
+
   useEffect(() => {
     fetchData();
 
@@ -1194,6 +1245,17 @@ const RequestsManager = () => {
     }
   };
 
+  const handleSuggestNewTimeList = async (id: string) => {
+    if (!suggestedDateTimeList) return;
+    const isoDateTime = new Date(suggestedDateTimeList).toISOString();
+    await supabase.from('appointments').update({
+      date_time: isoDateTime,
+      status: 'saat_onerildi'
+    }).eq('id', id);
+    setSuggestingRequestId(null);
+    fetchData();
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -1218,19 +1280,58 @@ const RequestsManager = () => {
                   Tarih/Saat: {format(new Date(r.date_time), 'dd MMM yyyy HH:mm', { locale: tr })}
                 </p>
               </div>
-              <div style={{ display: 'flex', gap: '12px' }}>
-                <button 
-                  onClick={() => handleReject(r.id)} 
-                  style={{ background: 'transparent', border: '1px solid #ff4444', color: '#ff4444', padding: '8px 16px', fontWeight: 'bold' }}
-                >
-                  Reddet
-                </button>
-                <button 
-                  onClick={() => handleApprove(r.id)} 
-                  style={{ background: 'var(--primary-color)', color: 'black', padding: '8px 16px', fontWeight: 'bold' }}
-                >
-                  Onayla
-                </button>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                {suggestingRequestId === r.id ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+                    <input 
+                      type="datetime-local" 
+                      value={suggestedDateTimeList} 
+                      onChange={e => setSuggestedDateTimeList(e.target.value)} 
+                      style={{ padding: '6px', fontSize: '0.9rem', borderRadius: '4px', background: '#222', border: '1px solid var(--primary-color)', color: 'white' }} 
+                    />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        onClick={() => setSuggestingRequestId(null)} 
+                        style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.1)', color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}
+                      >
+                        İptal
+                      </button>
+                      <button 
+                        onClick={() => handleSuggestNewTimeList(r.id)} 
+                        style={{ padding: '6px 12px', background: '#ff9800', color: 'black', fontWeight: 'bold', fontSize: '0.85rem' }}
+                      >
+                        Gönder
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <button 
+                      onClick={() => handleReject(r.id)} 
+                      style={{ background: 'transparent', border: '1px solid #ff4444', color: '#ff4444', padding: '8px 16px', fontWeight: 'bold' }}
+                    >
+                      Reddet
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const localDt = new Date(r.date_time);
+                        const tzOffset = localDt.getTimezoneOffset() * 60000;
+                        const localISOTime = new Date(localDt.getTime() - tzOffset).toISOString().slice(0, 16);
+                        setSuggestedDateTimeList(localISOTime);
+                        setSuggestingRequestId(r.id);
+                      }} 
+                      style={{ background: 'transparent', border: '1px solid #ff9800', color: '#ff9800', padding: '8px 16px', fontWeight: 'bold' }}
+                    >
+                      Saat Öner
+                    </button>
+                    <button 
+                      onClick={() => handleApprove(r.id)} 
+                      style={{ background: 'var(--primary-color)', color: 'black', padding: '8px 16px', fontWeight: 'bold' }}
+                    >
+                      Onayla
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ))}
