@@ -200,7 +200,7 @@ class _AppointmentDialog extends StatefulWidget {
 class _AppointmentDialogState extends State<_AppointmentDialog> {
   final _formKey = GlobalKey<FormState>();
 
-  String? _selectedCategory;
+  List<String> _selectedCategories = [];
   late TextEditingController _titleController;
   late DateTime _selectedDate;
   late int _durationMinutes;
@@ -222,7 +222,7 @@ class _AppointmentDialogState extends State<_AppointmentDialog> {
     final existing = widget.existingAppointment;
 
     _titleController = TextEditingController(text: existing?.title ?? '');
-    _selectedCategory = existing?.category;
+    _selectedCategories = existing?.category.split(', ').where((c) => c.isNotEmpty).toList() ?? [];
     _selectedDate = existing?.dateTime ?? widget.initialDate ?? DateTime.now();
     _durationMinutes = existing?.durationMinutes ?? 60;
     _priceController = TextEditingController(
@@ -325,7 +325,7 @@ class _AppointmentDialogState extends State<_AppointmentDialog> {
             widget.existingAppointment?.id ??
             DateTime.now().millisecondsSinceEpoch.toString(),
         title: _titleController.text.trim(),
-        category: _selectedCategory ?? 'Genel',
+        category: _selectedCategories.isEmpty ? 'Genel' : _selectedCategories.join(', '),
         dateTime: _selectedDate,
         durationMinutes: _durationMinutes,
         price: double.tryParse(_priceController.text.trim()) ?? 0.0,
@@ -354,11 +354,6 @@ class _AppointmentDialogState extends State<_AppointmentDialog> {
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<SalonProvider>(context, listen: false);
-    final categories = provider.services.map((s) => s.name).toList();
-    if (categories.isEmpty) categories.add('Genel');
-    if (_selectedCategory != null && !categories.contains(_selectedCategory)) {
-      categories.add(_selectedCategory!);
-    }
 
     final dateFormat = DateFormat('dd.MM.yyyy');
     final timeFormat = DateFormat('HH:mm');
@@ -399,45 +394,56 @@ class _AppointmentDialogState extends State<_AppointmentDialog> {
                 ),
                 const SizedBox(height: 20),
 
-                // Kategori
                 const Text(
-                  'Kategori',
+                  'Kategori (Çoklu Seçim)',
                   style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
                 ),
                 const SizedBox(height: 8),
-                DropdownButtonFormField<String>(
-                  value: _selectedCategory,
-                  dropdownColor: AppTheme.bgDark,
-                  decoration: const InputDecoration(hintText: 'Kategori Seçin'),
-                  items: categories.map((c) {
-                    return DropdownMenuItem(
-                      value: c,
-                      child: Text(
-                        c,
-                        style: const TextStyle(color: AppTheme.textLight),
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedCategory = val;
-                      if (val != null) {
-                        try {
-                          final service = provider.services.firstWhere(
-                            (s) => s.name == val,
-                          );
-                          _priceController.text = service.price.toStringAsFixed(
-                            0,
-                          );
-                        } catch (e) {
-                          // Not found, leave as is
-                        }
-                      }
-                    });
-                  },
-                  validator: (val) =>
-                      val == null ? 'Lütfen bir kategori seçin' : null,
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 150),
+                  decoration: BoxDecoration(
+                    color: AppTheme.bgDark,
+                    border: Border.all(color: Colors.white10),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: provider.services.map((service) {
+                      final isSelected = _selectedCategories.contains(service.name);
+                      return CheckboxListTile(
+                        title: Text('${service.name} (${service.price} ₺)', style: const TextStyle(color: AppTheme.textLight, fontSize: 14)),
+                        value: isSelected,
+                        activeColor: AppTheme.goldPrimary,
+                        checkColor: Colors.black,
+                        dense: true,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        onChanged: (bool? checked) {
+                          setState(() {
+                            if (checked == true) {
+                              _selectedCategories.add(service.name);
+                            } else {
+                              _selectedCategories.remove(service.name);
+                            }
+                            // Calculate total price
+                            double total = 0;
+                            for (var cat in _selectedCategories) {
+                              try {
+                                final s = provider.services.firstWhere((e) => e.name == cat);
+                                total += s.price;
+                              } catch (_) {}
+                            }
+                            _priceController.text = total > 0 ? total.toStringAsFixed(0) : '';
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
                 ),
+                if (_selectedCategories.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8, left: 12),
+                    child: Text('Lütfen en az bir kategori seçin', style: TextStyle(color: Colors.red, fontSize: 12)),
+                  ),
                 const SizedBox(height: 20),
 
                 // Müşteri İsmi / Başlık

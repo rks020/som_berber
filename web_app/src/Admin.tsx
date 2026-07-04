@@ -135,7 +135,7 @@ const AppointmentsManager = () => {
   
   // Form fields
   const [newTitle, setNewTitle] = useState('');
-  const [newApptService, setNewApptService] = useState('');
+  const [newApptServices, setNewApptServices] = useState<string[]>([]);
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
   const [newDuration, setNewDuration] = useState(60);
@@ -173,10 +173,10 @@ const AppointmentsManager = () => {
 
   const handleCreateAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedBarberId || !newTitle || !newApptService || !newDate || !newTime) return;
+    if (!selectedBarberId || !newTitle || newApptServices.length === 0 || !newDate || !newTime) return;
     
     setIsSubmitting(true);
-    const serviceDetails = services.find(s => s.id === newApptService);
+    const serviceNames = newApptServices.map(id => services.find(s => s.id === id)?.name).filter(Boolean).join(', ');
     const dt = new Date(`${newDate}T${newTime}`);
 
     const matchedCustomer = customers.find(c => c.name.toLowerCase() === newTitle.toLowerCase());
@@ -185,7 +185,7 @@ const AppointmentsManager = () => {
     await supabase.from('appointments').insert({
       id,
       title: newTitle,
-      category: serviceDetails?.name || '',
+      category: serviceNames || '',
       date_time: dt.toISOString(),
       status: 'onaylandı',
       customer_id: matchedCustomer ? matchedCustomer.id : null,
@@ -296,7 +296,7 @@ const AppointmentsManager = () => {
                         setNewDate(format(day, 'yyyy-MM-dd'));
                         setNewTime(hour.toString().padStart(2, '0') + ':00');
                         setNewTitle('');
-                        setNewApptService('');
+                        setNewApptServices([]);
                         setNewDuration(60);
                         setNewPrice('');
                         setNewOthers('');
@@ -355,19 +355,30 @@ const AppointmentsManager = () => {
 
             <form onSubmit={handleCreateAppointment}>
               <div className="form-group" style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', marginBottom: '8px' }}>Kategori</label>
-                <select 
-                  required 
-                  value={newApptService} 
-                  onChange={e => {
-                    setNewApptService(e.target.value);
-                    const s = services.find(serv => serv.id === e.target.value);
-                    if(s) setNewPrice(s.price);
-                  }}
-                >
-                  <option value="">Kategori Seçin</option>
-                  {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Kategori (Çoklu Seçim)</label>
+                <div style={{ maxHeight: '150px', overflowY: 'auto', background: 'var(--glass-bg)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+                  {services.map(s => (
+                    <label key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <input 
+                        type="checkbox" 
+                        checked={newApptServices.includes(s.id)}
+                        onChange={(e) => {
+                          let updated = [...newApptServices];
+                          if (e.target.checked) updated.push(s.id);
+                          else updated = updated.filter(id => id !== s.id);
+                          setNewApptServices(updated);
+
+                          const total = updated.reduce((sum, id) => {
+                            const serv = services.find(x => x.id === id);
+                            return sum + (serv?.price || 0);
+                          }, 0);
+                          setNewPrice(total || '');
+                        }}
+                      />
+                      {s.name} ({s.price}₺)
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div className="form-group" style={{ marginBottom: '16px' }}>
@@ -399,9 +410,9 @@ const AppointmentsManager = () => {
               <div className="form-group" style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', marginBottom: '8px' }}>Süre (Dakika)</label>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <button type="button" onClick={() => setNewDuration(Math.max(15, newDuration - 15))} style={{ padding: '4px 12px', background: 'transparent', border: '1px solid var(--text-muted)' }}>-</button>
+                  <button type="button" onClick={() => setNewDuration(Math.max(15, newDuration - 15))} style={{ padding: '4px 12px', background: 'transparent', border: '1px solid var(--primary-color)', color: 'var(--primary-color)', borderRadius: '4px' }}>-</button>
                   <span style={{ fontWeight: 'bold' }}>{newDuration} dk</span>
-                  <button type="button" onClick={() => setNewDuration(newDuration + 15)} style={{ padding: '4px 12px', background: 'transparent', border: '1px solid var(--text-muted)' }}>+</button>
+                  <button type="button" onClick={() => setNewDuration(newDuration + 15)} style={{ padding: '4px 12px', background: 'transparent', border: '1px solid var(--primary-color)', color: 'var(--primary-color)', borderRadius: '4px' }}>+</button>
                   <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '0.8rem' }}>Default (1 sa)</span>
                 </div>
               </div>
