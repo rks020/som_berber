@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../models/appointment.dart';
 import '../providers/salon_provider.dart';
 import '../theme/app_theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class AppointmentScreen extends StatefulWidget {
   const AppointmentScreen({super.key});
@@ -18,6 +19,22 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
   String? _selectedBarberId;
   String? _currentBarberId;
   AppointmentDataSource? _dataSource;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDefaultBarber();
+  }
+
+  Future<void> _loadDefaultBarber() async {
+    final prefs = await SharedPreferences.getInstance();
+    final barberId = prefs.getString('admin_selected_barber_id');
+    if (barberId != null && mounted) {
+      setState(() {
+        _selectedBarberId = barberId;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
