@@ -204,7 +204,7 @@ const AppointmentsManager = () => {
   // Build calendar data
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const hours = Array.from({ length: 17 }, (_, i) => i + 7); // 7 to 23
+  const hours = Array.from({ length: 15 }, (_, i) => i + 8); // 8 to 22
 
   const filteredAppointments = appointments.filter(a => a.barber_id === selectedBarberId);
 
@@ -220,10 +220,10 @@ const AppointmentsManager = () => {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
         <div>
-          <h2>Randevu Listesi</h2>
-          <p style={{ color: 'var(--text-muted)' }}>Berber bazlı haftalık taslak ve randevu yönetimi.</p>
+          <h2 style={{ margin: 0 }}>Randevu Listesi</h2>
+          <p style={{ color: 'var(--text-muted)', margin: '4px 0 0 0', fontSize: '0.9rem' }}>Berber bazlı haftalık taslak ve randevu yönetimi.</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button onClick={() => setCurrentDate(addDays(currentDate, -7))} style={{ background: 'var(--primary-color)', color: '#000', padding: '6px 12px' }}>&lt;</button>
@@ -233,7 +233,7 @@ const AppointmentsManager = () => {
       </div>
       
       {/* Barber Tabs */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px' }}>
+      <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', overflowX: 'auto', paddingBottom: '4px' }}>
         {barbers.map(barber => (
           <button 
             key={barber.id}
