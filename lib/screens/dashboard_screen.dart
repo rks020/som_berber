@@ -464,6 +464,7 @@ class DashboardScreen extends StatelessWidget {
   }
 
   void _showCompleteAppointmentSheet(BuildContext context, AppointmentModel appt) {
+    final provider = Provider.of<SalonProvider>(context, listen: false);
     final currencyFormat = NumberFormat.currency(locale: 'tr_TR', symbol: '₺', decimalDigits: 0);
     String selectedPayment = 'Nakit';
     final priceController = TextEditingController(
@@ -581,7 +582,6 @@ class DashboardScreen extends StatelessWidget {
                     child: ElevatedButton.icon(
                       onPressed: () {
                         final price = double.tryParse(priceController.text.trim()) ?? appt.price;
-                        final provider = Provider.of<SalonProvider>(context, listen: false);
 
                         final visit = Visit(
                           id: DateTime.now().millisecondsSinceEpoch.toString(),
