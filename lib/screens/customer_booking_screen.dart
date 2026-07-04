@@ -348,8 +348,7 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
                   ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
                   : const Text('Randevu Talebini Gönder', style: TextStyle(fontSize: 16)),
               ),
-            ],,
-            ),
+            ],
           ],
         ),
       ),
