@@ -377,13 +377,13 @@ const AppointmentsManager = () => {
                         title={`${app.title} - ${app.category}`}
                         style={{ 
                           position: 'absolute',
-                          top: `${top}px`,
-                          height: `${Math.max(20, height - 2)}px`,
-                          left: '2px',
-                          right: '2px',
+                          top: `${top + 1}px`,
+                          height: `${Math.max(16, height - 2)}px`,
+                          left: '4px',
+                          right: '4px',
                           background: app.color_hex || (app.status === 'bekliyor' ? '#ff9800' : 'var(--primary-color)'), 
                           color: '#000', 
-                          padding: '4px', 
+                          padding: '2px 4px', 
                           borderRadius: '4px', 
                           display: 'flex',
                           flexDirection: 'column',
@@ -392,17 +392,17 @@ const AppointmentsManager = () => {
                           overflow: 'hidden'
                         }}
                       >
-                        <div style={{ fontWeight: 'bold', fontSize: '0.65rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ fontWeight: 'bold', fontSize: '0.55rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {app.title} - {app.category}
                         </div>
                         <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', marginTop: 'auto' }}>
                           {app.status === 'bekliyor' && (
                             <button onClick={(e) => { e.stopPropagation(); handleUpdateStatus(app.id, 'onaylandı'); }} style={{ background: 'rgba(0,0,0,0.1)', padding: '2px', color: '#000', border: 'none', borderRadius: '4px' }}>
-                              <Check size={12} />
+                              <Check size={10} />
                             </button>
                           )}
                           <button onClick={(e) => { e.stopPropagation(); handleDelete(app.id); }} style={{ background: 'rgba(0,0,0,0.1)', padding: '2px', color: '#ff4444', border: 'none', borderRadius: '4px' }}>
-                            <X size={12} />
+                            <X size={10} />
                           </button>
                         </div>
                       </div>
