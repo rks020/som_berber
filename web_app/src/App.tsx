@@ -186,7 +186,7 @@ const Booking = () => {
         date_time: appTime.toISOString(),
         duration_minutes: 30, // Default duration
         price: service?.price || 0,
-        color_hex: '0xFF00FF00', // Default green
+        color_hex: '#4CAF50', // Default green
         status: 'bekliyor', // pending approval
         customer_id: customerId,
         barber_id: barberId

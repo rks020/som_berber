@@ -106,7 +106,7 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
         dateTime: appTime,
         durationMinutes: 30,
         price: _selectedService!.price,
-        colorHex: '0xFF00FF00', // Green for pending
+        colorHex: '#4CAF50', // Green for pending
         status: 'bekliyor',
         customerId: customerId,
         barberId: widget.barber.id,

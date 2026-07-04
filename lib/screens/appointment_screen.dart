@@ -837,8 +837,24 @@ class AppointmentDataSource extends CalendarDataSource {
 
   @override
   Color getColor(int index) {
-    final hex = _getAppointment(index).colorHex.replaceAll('#', '');
-    return Color(int.parse('FF$hex', radix: 16));
+    try {
+      var hex = _getAppointment(index).colorHex.trim();
+      // Remove any prefix
+      if (hex.startsWith('0x') || hex.startsWith('0X')) {
+        hex = hex.substring(2);
+      }
+      hex = hex.replaceAll('#', '');
+      
+      // If it's already an 8-character hex (ARGB)
+      if (hex.length == 8) {
+        return Color(int.parse(hex, radix: 16));
+      }
+      // If it's a 6-character hex (RGB)
+      if (hex.length == 6) {
+        return Color(int.parse('FF$hex', radix: 16));
+      }
+    } catch (_) {}
+    return const Color(0xFF4CAF50); // Safe fallback green
   }
 
   @override
