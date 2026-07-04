@@ -91,6 +91,12 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     }
 
+    if (_currentIndex == 0 && provider.unreadRequestsCount > 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        provider.clearUnreadRequestsCount();
+      });
+    }
+
     return Scaffold(
       body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: BottomNavigationBar(
@@ -100,10 +106,16 @@ class _HomeScreenState extends State<HomeScreen> {
             _currentIndex = index;
           });
         },
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard_outlined),
-            activeIcon: Icon(Icons.dashboard),
+            icon: provider.unreadRequestsCount > 0
+                ? Badge(
+                    label: Text(provider.unreadRequestsCount.toString()),
+                    backgroundColor: Colors.red,
+                    child: const Icon(Icons.dashboard_outlined),
+                  )
+                : const Icon(Icons.dashboard_outlined),
+            activeIcon: const Icon(Icons.dashboard),
             label: 'Panel',
           ),
           BottomNavigationBarItem(

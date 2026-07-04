@@ -17,6 +17,8 @@ class SalonProvider extends ChangeNotifier {
   List<AppointmentModel> _appointments = [];
 
   bool _isLoading = true;
+  int _unreadRequestsCount = 0;
+  bool _firstLoad = true;
 
   // Getters
   List<Customer> get customers => _customers;
@@ -25,8 +27,19 @@ class SalonProvider extends ChangeNotifier {
   List<Visit> get visits => _visits;
   List<AppointmentModel> get appointments => _appointments;
   bool get isLoading => _isLoading;
+  int get unreadRequestsCount => _unreadRequestsCount;
 
   AppointmentModel? pendingRequestNotification;
+
+  void clearUnreadRequestsCount() {
+    _unreadRequestsCount = 0;
+    notifyListeners();
+  }
+
+  void incrementUnreadRequestsCount() {
+    _unreadRequestsCount++;
+    notifyListeners();
+  }
 
   void clearPendingRequestNotification() {
     pendingRequestNotification = null;
@@ -97,6 +110,11 @@ class SalonProvider extends ChangeNotifier {
 
     final aRes = await _supabase.from('appointments').select();
     _appointments = aRes.map((e) => AppointmentModel.fromMap(e)).toList();
+
+    if (_firstLoad) {
+      _unreadRequestsCount = _appointments.where((a) => a.status == 'bekliyor').length;
+      _firstLoad = false;
+    }
   }
 
   void _setupRealtime() {
@@ -124,6 +142,7 @@ class SalonProvider extends ChangeNotifier {
                       '${app.title} - ${app.category} için onay bekliyor.',
                     );
                     pendingRequestNotification = app;
+                    _unreadRequestsCount++;
                     notifyListeners();
                   }
                 }

@@ -82,7 +82,7 @@ const AdminLogin = ({ onLogin }: { onLogin: () => void }) => {
   );
 };
 
-const Sidebar = ({ onLogout }: { onLogout: () => void }) => {
+const Sidebar = ({ onLogout, unreadCount }: { onLogout: () => void, unreadCount: number }) => {
   const location = useLocation();
   const menu = [
     { name: 'Randevular', path: '/admin', icon: <CalendarCheck size={20} /> },
@@ -97,21 +97,40 @@ const Sidebar = ({ onLogout }: { onLogout: () => void }) => {
     <div style={{ width: '250px', borderRight: '1px solid rgba(255,255,255,0.1)', padding: '24px', display: 'flex', flexDirection: 'column' }}>
       <h2 style={{ color: 'var(--primary-color)', marginBottom: '32px' }}>SOM Admin</h2>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {menu.map(item => (
-          <Link 
-            key={item.path} 
-            to={item.path} 
-            style={{ 
-              display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', 
-              borderRadius: '8px', 
-              backgroundColor: location.pathname === item.path || (location.pathname === '/admin/' && item.path === '/admin') ? 'var(--primary-color)' : 'transparent',
-              color: location.pathname === item.path || (location.pathname === '/admin/' && item.path === '/admin') ? '#000' : 'var(--text-color)',
-              fontWeight: location.pathname === item.path ? 600 : 400
-            }}
-          >
-            {item.icon} {item.name}
-          </Link>
-        ))}
+        {menu.map(item => {
+          const isRequests = item.path === '/admin/requests';
+          const isActive = location.pathname === item.path || (location.pathname === '/admin/' && item.path === '/admin');
+          return (
+            <Link 
+              key={item.path} 
+              to={item.path} 
+              style={{ 
+                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', 
+                borderRadius: '8px', 
+                backgroundColor: isActive ? 'var(--primary-color)' : 'transparent',
+                color: isActive ? '#000' : 'var(--text-color)',
+                fontWeight: isActive ? 600 : 400,
+                textDecoration: 'none'
+              }}
+            >
+              {item.icon}
+              <span>{item.name}</span>
+              {isRequests && unreadCount > 0 && (
+                <span style={{
+                  backgroundColor: '#ff4444',
+                  color: 'white',
+                  borderRadius: '10px',
+                  padding: '2px 8px',
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold',
+                  marginLeft: 'auto'
+                }}>
+                  {unreadCount}
+                </span>
+              )}
+            </Link>
+          );
+        })}
       </div>
       <button onClick={onLogout} style={{ background: 'transparent', color: '#ff4444', border: '1px solid #ff4444', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
         <LogOut size={18} /> Çıkış Yap
@@ -1224,12 +1243,56 @@ const RequestsManager = () => {
 
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [unreadRequestsCount, setUnreadRequestsCount] = useState(0);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const auth = localStorage.getItem('adminAuth');
     if (auth === 'true') setIsAuthenticated(true);
   }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    // Initial fetch of unread count
+    const fetchInitialUnread = async () => {
+      const { count } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'bekliyor');
+      setUnreadRequestsCount(count || 0);
+    };
+    fetchInitialUnread();
+
+    // Subscribe to realtime changes in appointments to keep unread count updated
+    const channel = supabase
+      .channel('root:unread-requests')
+      .on('postgres_changes' as any, { event: 'INSERT', schema: 'public', table: 'appointments' }, (payload: any) => {
+        const newAppt = payload.new;
+        if (newAppt && newAppt.status === 'bekliyor') {
+          // Play notification sound
+          new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-500.wav').play().catch(() => {});
+          if (location.pathname !== '/admin/requests') {
+            setUnreadRequestsCount(prev => prev + 1);
+          }
+        }
+      })
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'appointments' }, () => {
+        fetchInitialUnread();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated, location.pathname]);
+
+  useEffect(() => {
+    if (location.pathname === '/admin/requests') {
+      setUnreadRequestsCount(0);
+    }
+  }, [location.pathname]);
 
   const handleLogin = () => {
     setIsAuthenticated(true);
@@ -1248,7 +1311,7 @@ export default function Admin() {
 
   return (
     <div style={{ display: 'flex', minHeight: '80vh', gap: '24px', margin: '-40px', padding: '40px', background: 'var(--bg-color)' }}>
-      <Sidebar onLogout={handleLogout} />
+      <Sidebar onLogout={handleLogout} unreadCount={unreadRequestsCount} />
       <div style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
         <Routes>
           <Route path="/" element={<AppointmentsManager />} />
