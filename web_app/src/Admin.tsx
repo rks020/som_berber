@@ -335,12 +335,15 @@ const AppointmentsManager = () => {
           <div style={{ minWidth: '800px', display: 'grid', gridTemplateColumns: '50px repeat(7, 1fr)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
             {/* Header */}
             <div style={{ padding: '4px', borderRight: '1px solid rgba(255,255,255,0.05)' }}></div>
-            {days.map((day, i) => (
-              <div key={i} style={{ padding: '4px', textAlign: 'center', fontWeight: 'bold', color: 'var(--primary-color)', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
-                <span style={{ fontSize: '0.75rem' }}>{format(day, 'EEE', { locale: tr })}</span><br/>
-                <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{format(day, 'd MMM', { locale: tr })}</span>
-              </div>
-            ))}
+            {days.map((day, i) => {
+              const isSunday = day.getDay() === 0;
+              return (
+                <div key={i} style={{ padding: '4px', textAlign: 'center', fontWeight: 'bold', color: isSunday ? '#f44336' : 'var(--primary-color)', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ fontSize: '0.75rem' }}>{format(day, 'EEE', { locale: tr })} {isSunday && '🔒'}</span><br/>
+                  <span style={{ fontSize: '0.65rem', color: isSunday ? '#f44336' : 'var(--text-muted)' }}>{format(day, 'd MMM', { locale: tr })}</span>
+                </div>
+              );
+            })}
           </div>
 
           <div style={{ minWidth: '800px', display: 'flex' }}>
@@ -355,6 +358,7 @@ const AppointmentsManager = () => {
             
             {/* Days columns */}
             {days.map((day, dIdx) => {
+              const isSunday = day.getDay() === 0;
               const dayApps = filteredAppointments.filter(app => {
                 const appDate = parseISO(app.date_time);
                 return appDate.getDate() === day.getDate() && 
@@ -365,26 +369,51 @@ const AppointmentsManager = () => {
               return (
                 <div key={dIdx} style={{ flex: 1, position: 'relative', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
                   {/* Grid cells for clicking */}
-                  {hours.map(hour => (
-                    <div 
-                      key={hour}
-                      onClick={() => {
-                        setSelectedSlot({ date: day, hour });
-                        setEditingAppointmentId(null);
-                        setNewDate(format(day, 'yyyy-MM-dd'));
-                        setNewTime(hour.toString().padStart(2, '0') + ':00');
-                        setNewTitle('');
-                        setNewApptServices([]);
-                        setNewDuration(60);
-                        setNewPrice('');
-                        setNewOthers('');
-                        setNewColor('#ff9800');
-                        setIsCategoryDropdownOpen(false);
-                        setIsModalOpen(true); 
-                      }}
-                      style={{ height: '36px', boxSizing: 'border-box', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }}
-                    />
-                  ))}
+                  {hours.map(hour => {
+                    if (isSunday) {
+                      return (
+                        <div 
+                          key={hour}
+                          style={{ 
+                            height: '36px', 
+                            boxSizing: 'border-box', 
+                            borderBottom: '1px solid rgba(255,255,255,0.05)', 
+                            background: 'rgba(244, 67, 54, 0.06)',
+                            color: '#ff4444',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '0.75rem',
+                            fontWeight: 'bold',
+                            cursor: 'not-allowed',
+                            userSelect: 'none'
+                          }}
+                        >
+                          KAPALI
+                        </div>
+                      );
+                    }
+                    return (
+                      <div 
+                        key={hour}
+                        onClick={() => {
+                          setSelectedSlot({ date: day, hour });
+                          setEditingAppointmentId(null);
+                          setNewDate(format(day, 'yyyy-MM-dd'));
+                          setNewTime(hour.toString().padStart(2, '0') + ':00');
+                          setNewTitle('');
+                          setNewApptServices([]);
+                          setNewDuration(60);
+                          setNewPrice('');
+                          setNewOthers('');
+                          setNewColor('#ff9800');
+                          setIsCategoryDropdownOpen(false);
+                          setIsModalOpen(true); 
+                        }}
+                        style={{ height: '36px', boxSizing: 'border-box', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }}
+                      />
+                    );
+                  })}
                   
                   {/* Appointments overlaid */}
                   {dayApps.map(app => {

@@ -96,6 +96,13 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
   }
 
   Future<void> _submitBooking(SalonProvider provider) async {
+    if (_selectedDate.weekday == DateTime.sunday) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pazar günleri kapalıyız')),
+      );
+      return;
+    }
+
     if (_selectedTime == null || _selectedService == null || _nameController.text.isEmpty || _phoneController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Lütfen tüm alanları doldurun')),
@@ -224,88 +231,124 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
               ],
             ),
             const SizedBox(height: 24),
-            
-            // Time Slots
-            const Text('Saat Seçin', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: timeSlots.map((time) {
-                final disabled = _isSlotDisabled(time, provider.appointments);
-                final selected = _selectedTime == time;
-                
-                return InkWell(
-                  onTap: disabled ? null : () => setState(() => _selectedTime = time),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: selected ? Colors.amber : (disabled ? Colors.white10 : Colors.white24),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: selected ? Colors.amber : Colors.transparent,
-                      ),
-                    ),
-                    child: Text(
-                      time,
+               if (_selectedDate.weekday == DateTime.sunday) ...[
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.red.withOpacity(0.2)),
+                ),
+                child: const Column(
+                  children: [
+                    Icon(Icons.lock_outline, color: Colors.redAccent, size: 50),
+                    SizedBox(height: 16),
+                    Text(
+                      'Pazar Günleri Kapalıyız',
                       style: TextStyle(
-                        color: selected ? Colors.black : (disabled ? Colors.white30 : Colors.white),
-                        fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                        color: Colors.redAccent,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Salonumuz Pazar günleri hizmet vermemektedir. Lütfen diğer günleri seçiniz.',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 13,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              // Time Slots
+              const Text('Saat Seçin', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: timeSlots.map((time) {
+                  final disabled = _isSlotDisabled(time, provider.appointments);
+                  final selected = _selectedTime == time;
+                  
+                  return InkWell(
+                    onTap: disabled ? null : () => setState(() => _selectedTime = time),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: selected ? Colors.amber : (disabled ? Colors.white10 : Colors.white24),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: selected ? Colors.amber : Colors.transparent,
+                        ),
+                      ),
+                      child: Text(
+                        time,
+                        style: TextStyle(
+                          color: selected ? Colors.black : (disabled ? Colors.white30 : Colors.white),
+                          fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                        ),
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 32),
+                  );
+                }).toList(),
+              ),
+              const SizedBox(height: 32),
 
-            // Form
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Ad Soyad',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.person),
+              // Form
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Ad Soyad',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _phoneController,
-              decoration: const InputDecoration(
-                labelText: 'Telefon Numarası',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.phone),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _phoneController,
+                decoration: const InputDecoration(
+                  labelText: 'Telefon Numarası',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.phone),
+                ),
+                keyboardType: TextInputType.phone,
               ),
-              keyboardType: TextInputType.phone,
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<Service>(
-              decoration: const InputDecoration(
-                labelText: 'Hizmet Seçimi',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.content_cut),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<Service>(
+                decoration: const InputDecoration(
+                  labelText: 'Hizmet Seçimi',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.content_cut),
+                ),
+                value: _selectedService,
+                items: provider.services.map((s) {
+                  return DropdownMenuItem(
+                    value: s,
+                    child: Text('${s.name} - ${s.price} ₺'),
+                  );
+                }).toList(),
+                onChanged: (val) => setState(() => _selectedService = val),
               ),
-              value: _selectedService,
-              items: provider.services.map((s) {
-                return DropdownMenuItem(
-                  value: s,
-                  child: Text('${s.name} - ${s.price} ₺'),
-                );
-              }).toList(),
-              onChanged: (val) => setState(() => _selectedService = val),
-            ),
-            const SizedBox(height: 32),
-            
-            ElevatedButton(
-              onPressed: _isSubmitting ? null : () => _submitBooking(provider),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Colors.amber,
-                foregroundColor: Colors.black,
+              const SizedBox(height: 32),
+              
+              ElevatedButton(
+                onPressed: _isSubmitting ? null : () => _submitBooking(provider),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Colors.amber,
+                  foregroundColor: Colors.black,
+                ),
+                child: _isSubmitting 
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Text('Randevu Talebini Gönder', style: TextStyle(fontSize: 16)),
               ),
-              child: _isSubmitting 
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Randevu Talebini Gönder', style: TextStyle(fontSize: 16)),
+            ],,
             ),
           ],
         ),
