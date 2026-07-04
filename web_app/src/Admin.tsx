@@ -155,6 +155,19 @@ const AppointmentsManager = () => {
 
   useEffect(() => {
     fetchData();
+
+    // Realtime: update when mobile adds appointments
+    const channel = supabase
+      .channel('web:appointments')
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'appointments' }, () => {
+        fetchData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

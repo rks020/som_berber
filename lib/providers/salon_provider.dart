@@ -93,52 +93,40 @@ class SalonProvider extends ChangeNotifier {
   }
 
   void _setupRealtime() {
-    _supabase.channel('public:customers').onPostgresChanges(
-      event: PostgresChangeEvent.all,
-      schema: 'public',
-      table: 'customers',
-      callback: (payload) {
-        _fetchInitialData().then((_) => notifyListeners());
-      },
-    ).subscribe();
-
-    _supabase.channel('public:barbers').onPostgresChanges(
-      event: PostgresChangeEvent.all,
-      schema: 'public',
-      table: 'barbers',
-      callback: (payload) {
-        _fetchInitialData().then((_) => notifyListeners());
-      },
-    ).subscribe();
-
-    _supabase.channel('public:services').onPostgresChanges(
-      event: PostgresChangeEvent.all,
-      schema: 'public',
-      table: 'services',
-      callback: (payload) {
-        _fetchInitialData().then((_) => notifyListeners());
-      },
-    ).subscribe();
-
-    _supabase.channel('public:visits').onPostgresChanges(
-      event: PostgresChangeEvent.all,
-      schema: 'public',
-      table: 'visits',
-      callback: (payload) {
-        _fetchInitialData().then((_) => notifyListeners());
-      },
-    ).subscribe();
-
-    _supabase.channel('public:appointments').onPostgresChanges(
-      event: PostgresChangeEvent.all,
-      schema: 'public',
-      table: 'appointments',
-      callback: (payload) {
-        _fetchInitialData().then((_) {
-          notifyListeners();
-        });
-      },
-    ).subscribe();
+    // Use a single channel to avoid duplicate subscription conflicts
+    _supabase
+        .channel('public:all-tables')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'appointments',
+          callback: (_) => _fetchInitialData().then((_) => notifyListeners()),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'customers',
+          callback: (_) => _fetchInitialData().then((_) => notifyListeners()),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'barbers',
+          callback: (_) => _fetchInitialData().then((_) => notifyListeners()),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'services',
+          callback: (_) => _fetchInitialData().then((_) => notifyListeners()),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'visits',
+          callback: (_) => _fetchInitialData().then((_) => notifyListeners()),
+        )
+        .subscribe();
   }
 
   // --- CUSTOMER OPERATIONS ---
