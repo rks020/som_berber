@@ -96,6 +96,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
                 ),
               Expanded(
                 child: SfCalendar(
+                  key: ValueKey(_currentBarberId),
                   view: CalendarView.week,
                   firstDayOfWeek: 1, // Monday
                   timeSlotViewSettings: TimeSlotViewSettings(

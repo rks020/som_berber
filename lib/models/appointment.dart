@@ -58,7 +58,7 @@ class AppointmentModel {
       'id': id,
       'title': title,
       'category': category,
-      'date_time': dateTime.toIso8601String(),
+      'date_time': dateTime.toUtc().toIso8601String(),
       'duration_minutes': durationMinutes,
       'price': price,
       'additional_people': additionalPeople,
