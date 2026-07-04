@@ -228,6 +228,8 @@ const AppointmentsManager = () => {
     if (deleteConfirmId) {
       await supabase.from('appointments').delete().eq('id', deleteConfirmId);
       setDeleteConfirmId(null);
+      setIsModalOpen(false);
+      setEditingAppointmentId(null);
       fetchData();
     }
   };
@@ -401,9 +403,6 @@ const AppointmentsManager = () => {
                               <Check size={10} />
                             </button>
                           )}
-                          <button onClick={(e) => { e.stopPropagation(); handleDelete(app.id); }} style={{ background: 'rgba(0,0,0,0.1)', padding: '2px', color: '#ff4444', border: 'none', borderRadius: '4px' }}>
-                            <X size={10} />
-                          </button>
                         </div>
                       </div>
                     );
@@ -550,9 +549,19 @@ const AppointmentsManager = () => {
                 </div>
               </div>
 
-              <button type="submit" disabled={isSubmitting} style={{ width: '100%', marginTop: '12px' }}>
+              <button type="submit" disabled={isSubmitting} style={{ width: '100%', marginTop: '12px', padding: '12px', fontWeight: 'bold' }}>
                 {isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
               </button>
+              
+              {editingAppointmentId && (
+                <button 
+                  type="button" 
+                  onClick={() => handleDelete(editingAppointmentId)} 
+                  style={{ width: '100%', marginTop: '12px', padding: '12px', fontWeight: 'bold', background: 'transparent', border: '1px solid #ff4444', color: '#ff4444' }}
+                >
+                  Randevuyu Sil
+                </button>
+              )}
             </form>
           </div>
         </div>
