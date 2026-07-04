@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
-import { LayoutDashboard, Users, Scissors, CalendarCheck, LogOut, Check, X, Trash2 } from 'lucide-react';
+import { LayoutDashboard, Users, Scissors, CalendarCheck, LogOut, Check, X, Trash2, Wallet } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
@@ -86,6 +86,7 @@ const Sidebar = ({ onLogout }: { onLogout: () => void }) => {
     { name: 'Müşteriler', path: '/admin/customers', icon: <Users size={20} /> },
     { name: 'Hizmetler', path: '/admin/services', icon: <Scissors size={20} /> },
     { name: 'Adisyonlar', path: '/admin/visits', icon: <LayoutDashboard size={20} /> },
+    { name: 'Finans', path: '/admin/finance', icon: <Wallet size={20} /> },
   ];
 
   return (
@@ -399,6 +400,194 @@ const VisitsManager = () => {
   );
 };
 
+const FinanceManager = () => {
+  const [visits, setVisits] = useState<Visit[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [barbers, setBarbers] = useState<Barber[]>([]);
+  
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth();
+  
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const [selectedMonth, setSelectedMonth] = useState<number>(currentMonth);
+  const [loading, setLoading] = useState(true);
+
+  const months = [
+    'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 
+    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+  ];
+  const years = Array.from({length: 5}, (_, i) => currentYear - i);
+
+  useEffect(() => {
+    fetchData();
+  }, [selectedYear, selectedMonth]);
+
+  const fetchData = async () => {
+    setLoading(true);
+    // Determine month bounds
+    const startDate = new Date(selectedYear, selectedMonth, 1).toISOString();
+    const endDate = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59).toISOString();
+
+    const { data: vData } = await supabase
+      .from('visits')
+      .select('*')
+      .eq('status', 'Tamamlandı')
+      .gte('date_time', startDate)
+      .lte('date_time', endDate)
+      .order('date_time', { ascending: false });
+    
+    if (vData) setVisits(vData);
+
+    const { data: cData } = await supabase.from('customers').select('*');
+    if (cData) setCustomers(cData);
+
+    const { data: bData } = await supabase.from('barbers').select('*');
+    if (bData) setBarbers(bData);
+
+    setLoading(false);
+  };
+
+  const totalRevenue = visits.reduce((sum, v) => sum + (v.total_price || 0), 0);
+  
+  // Bugunku ciro hesabi (sadece secili ay ve yil bugune uyuyorsa hesaplamak mantikli ama her zaman gosterebiliriz)
+  const today = new Date();
+  const todayVisits = visits.filter(v => {
+    const d = new Date(v.date_time);
+    return d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+  });
+  const todayRevenue = todayVisits.reduce((sum, v) => sum + (v.total_price || 0), 0);
+
+  // Odeme yontemi dagilimi
+  const paymentMethods: Record<string, number> = {};
+  visits.forEach(v => {
+    const m = v.payment_method || 'Belirtilmedi';
+    paymentMethods[m] = (paymentMethods[m] || 0) + (v.total_price || 0);
+  });
+
+  // Berber cirolari
+  const barberRevenues: Record<string, number> = {};
+  visits.forEach(v => {
+    const b = barbers.find(bar => bar.id === v.barber_id)?.name || 'Bilinmiyor';
+    barberRevenues[b] = (barberRevenues[b] || 0) + (v.total_price || 0);
+  });
+
+  return (
+    <div>
+      <h2>Finans & Ödemeler</h2>
+      <p style={{ color: 'var(--text-muted)', marginBottom: '24px' }}>İşletmenizin gelir özetini ve ciro dağılımlarını buradan takip edebilirsiniz.</p>
+      
+      <div style={{ display: 'flex', gap: '24px', marginBottom: '24px' }}>
+        <div style={{ flex: 1 }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.8rem', color: 'var(--gold-medium)', fontWeight: 'bold' }}>YIL SEÇİMİ</label>
+          <select 
+            value={selectedYear} 
+            onChange={e => setSelectedYear(parseInt(e.target.value))}
+            style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '8px' }}
+          >
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+        <div style={{ flex: 1 }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontSize: '0.8rem', color: 'var(--gold-medium)', fontWeight: 'bold' }}>AY SEÇİMİ</label>
+          <select 
+            value={selectedMonth} 
+            onChange={e => setSelectedMonth(parseInt(e.target.value))}
+            style={{ width: '100%', padding: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '8px' }}
+          >
+            {months.map((m, i) => <option key={i} value={i}>{m}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '24px', marginBottom: '24px' }}>
+        <div className="glass-panel" style={{ flex: 1 }}>
+          <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>Aylık Toplam Ciro</p>
+          <h2 style={{ color: 'var(--gold-primary)', margin: '8px 0 0 0' }}>{totalRevenue.toFixed(2)} ₺</h2>
+        </div>
+        <div className="glass-panel" style={{ flex: 1 }}>
+          <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>Bugünkü Ciro</p>
+          <h2 style={{ color: 'white', margin: '8px 0 0 0' }}>{todayRevenue.toFixed(2)} ₺</h2>
+        </div>
+        <div className="glass-panel" style={{ flex: 1 }}>
+          <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>İşlem Sayısı</p>
+          <h2 style={{ color: 'white', margin: '8px 0 0 0' }}>{visits.length}</h2>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '24px', marginBottom: '24px' }}>
+        <div className="glass-panel" style={{ flex: 1 }}>
+          <h3 style={{ color: 'var(--gold-primary)', marginTop: 0, marginBottom: '16px' }}>Ödeme Yöntemleri Dağılımı</h3>
+          {Object.entries(paymentMethods).length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {Object.entries(paymentMethods).map(([method, amount]) => (
+                <div key={method} style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ color: 'var(--text-light)' }}>{method}</span>
+                  <span style={{ fontWeight: 'bold' }}>{amount.toFixed(2)} ₺</span>
+                </div>
+              ))}
+            </div>
+          ) : <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Bu ayda bir ödeme mevcut değil.</p>}
+        </div>
+
+        <div className="glass-panel" style={{ flex: 1 }}>
+          <h3 style={{ color: 'var(--gold-primary)', marginTop: 0, marginBottom: '16px' }}>Berber Ciro Dağılımı</h3>
+          {Object.entries(barberRevenues).length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {Object.entries(barberRevenues).map(([barber, amount]) => (
+                <div key={barber} style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ color: 'var(--text-light)' }}>{barber}</span>
+                  <span style={{ fontWeight: 'bold' }}>{amount.toFixed(2)} ₺</span>
+                </div>
+              ))}
+            </div>
+          ) : <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Bu ayda bir ödeme mevcut değil.</p>}
+        </div>
+      </div>
+
+      <div className="glass-panel">
+        <h3 style={{ color: 'var(--gold-primary)', marginTop: 0, marginBottom: '16px' }}>Aylık İşlem Listesi</h3>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '700px' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Tarih</th>
+                <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Üye (Müşteri)</th>
+                <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Hizmetler</th>
+                <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Berber</th>
+                <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Yöntem</th>
+                <th style={{ padding: '12px', color: 'var(--text-muted)' }}>Tutar</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={6} style={{ padding: '16px', textAlign: 'center' }}>Yükleniyor...</td></tr>
+              ) : visits.length === 0 ? (
+                <tr><td colSpan={6} style={{ padding: '16px', textAlign: 'center', color: 'var(--text-muted)' }}>Bu ayda bir ödeme mevcut değil.</td></tr>
+              ) : (
+                visits.map(v => {
+                  const customerName = customers.find(c => c.id === v.customer_id)?.name || 'Bilinmiyor';
+                  const barberName = barbers.find(b => b.id === v.barber_id)?.name || 'Bilinmiyor';
+                  
+                  return (
+                    <tr key={v.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '12px' }}>{format(new Date(v.date_time), 'dd MMM yyyy HH:mm', { locale: tr })}</td>
+                      <td style={{ padding: '12px', fontWeight: 'bold' }}>{customerName}</td>
+                      <td style={{ padding: '12px' }}>{v.services?.join(', ') || '-'}</td>
+                      <td style={{ padding: '12px' }}>{barberName}</td>
+                      <td style={{ padding: '12px' }}>{v.payment_method}</td>
+                      <td style={{ padding: '12px', color: 'var(--gold-primary)', fontWeight: 'bold' }}>{v.total_price} ₺</td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
@@ -432,6 +621,7 @@ export default function Admin() {
           <Route path="/customers" element={<CustomersManager />} />
           <Route path="/services" element={<ServicesManager />} />
           <Route path="/visits" element={<VisitsManager />} />
+          <Route path="/finance" element={<FinanceManager />} />
         </Routes>
       </div>
     </div>
