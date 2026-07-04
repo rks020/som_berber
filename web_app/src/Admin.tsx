@@ -153,13 +153,41 @@ const AppointmentsManager = () => {
   
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [pendingRequest, setPendingRequest] = useState<Appointment | null>(null);
+
+  const handleApprovePending = async () => {
+    if (!pendingRequest) return;
+    await supabase.from('appointments').update({ status: 'onaylandı' }).eq('id', pendingRequest.id);
+    setPendingRequest(null);
+    fetchData();
+  };
+
+  const handleRejectPending = async () => {
+    if (!pendingRequest) return;
+    await supabase.from('appointments').delete().eq('id', pendingRequest.id);
+    setPendingRequest(null);
+    fetchData();
+  };
+
   useEffect(() => {
     fetchData();
 
     // Realtime: update when mobile adds appointments
     const channel = supabase
       .channel('web:appointments')
-      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'appointments' }, () => {
+      .on('postgres_changes' as any, { event: 'INSERT', schema: 'public', table: 'appointments' }, (payload: any) => {
+        fetchData();
+        const newApp = payload.new;
+        if (newApp && newApp.status === 'bekliyor') {
+          // Play notification sound
+          new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-500.wav').play().catch(() => {});
+          setPendingRequest(newApp);
+        }
+      })
+      .on('postgres_changes' as any, { event: 'UPDATE', schema: 'public', table: 'appointments' }, () => {
+        fetchData();
+      })
+      .on('postgres_changes' as any, { event: 'DELETE', schema: 'public', table: 'appointments' }, () => {
         fetchData();
       })
       .subscribe();
@@ -592,6 +620,29 @@ const AppointmentsManager = () => {
               </button>
               <button onClick={confirmDelete} style={{ flex: 1, background: '#ff4444', color: 'white' }}>
                 Sil
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pending Request Modal */}
+      {pendingRequest && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 2000, padding: '20px' }}>
+          <div className="glass-panel" style={{ width: '400px', padding: '24px', border: '1px solid var(--primary-color)' }}>
+            <h2 style={{ color: 'var(--primary-color)', marginBottom: '16px', textAlign: 'center' }}>🔔 Yeni Randevu Talebi!</h2>
+            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '16px', borderRadius: '8px', marginBottom: '24px' }}>
+              <p style={{ margin: '8px 0' }}><strong>Müşteri:</strong> {pendingRequest.title}</p>
+              <p style={{ margin: '8px 0' }}><strong>Hizmet:</strong> {pendingRequest.category}</p>
+              <p style={{ margin: '8px 0' }}><strong>Tarih/Saat:</strong> {new Date(pendingRequest.date_time).toLocaleString('tr-TR')}</p>
+              {pendingRequest.price > 0 && <p style={{ margin: '8px 0' }}><strong>Ücret:</strong> {pendingRequest.price} ₺</p>}
+            </div>
+            <div style={{ display: 'flex', gap: '16px' }}>
+              <button onClick={handleRejectPending} style={{ flex: 1, background: '#f44336', color: 'white', fontWeight: 'bold', padding: '12px' }}>
+                Reddet
+              </button>
+              <button onClick={handleApprovePending} style={{ flex: 1, background: '#4caf50', color: 'black', fontWeight: 'bold', padding: '12px' }}>
+                Onayla
               </button>
             </div>
           </div>

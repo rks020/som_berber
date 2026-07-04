@@ -26,6 +26,13 @@ class SalonProvider extends ChangeNotifier {
   List<AppointmentModel> get appointments => _appointments;
   bool get isLoading => _isLoading;
 
+  AppointmentModel? pendingRequestNotification;
+
+  void clearPendingRequestNotification() {
+    pendingRequestNotification = null;
+    notifyListeners();
+  }
+
   Future<void> init() async {
     _isLoading = true;
     notifyListeners();
@@ -100,7 +107,29 @@ class SalonProvider extends ChangeNotifier {
           event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'appointments',
-          callback: (_) => _fetchInitialData().then((_) => notifyListeners()),
+          callback: (payload) {
+            _fetchInitialData().then((_) {
+              notifyListeners();
+
+              // Check if it's a new appointment with pending approval
+              if (payload.eventType == PostgresChangeEvent.insert) {
+                final newRecord = payload.newRecord;
+                if (newRecord != null) {
+                  final app = AppointmentModel.fromMap(newRecord);
+                  if (app.status == 'bekliyor') {
+                    // Trigger immediate local notification
+                    NotificationService().showImmediateNotification(
+                      app.id.hashCode,
+                      '🔔 Yeni Randevu Talebi!',
+                      '${app.title} - ${app.category} için onay bekliyor.',
+                    );
+                    pendingRequestNotification = app;
+                    notifyListeners();
+                  }
+                }
+              }
+            });
+          },
         )
         .onPostgresChanges(
           event: PostgresChangeEvent.all,

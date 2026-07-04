@@ -8,6 +8,8 @@ import '../widgets/visit_card.dart';
 import '../models/appointment.dart';
 import '../models/visit.dart';
 import 'visit_entry_screen.dart';
+import 'auth_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -127,6 +129,23 @@ class DashboardScreen extends StatelessWidget {
                       ),
                       icon: const Icon(Icons.add),
                       tooltip: 'Yeni Adisyon Ekle',
+                    ),
+                    const SizedBox(width: 8),
+                    // Logout Button
+                    IconButton(
+                      onPressed: () async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.remove('is_admin_logged_in');
+                        await prefs.remove('admin_selected_barber_id');
+                        if (context.mounted) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => const AuthScreen()),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.logout, color: AppTheme.accentRed),
+                      tooltip: 'Çıkış Yap',
                     ),
                   ],
                 ),

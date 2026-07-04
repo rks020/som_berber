@@ -18,6 +18,23 @@ class _AuthScreenState extends State<AuthScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _checkAdminLogin();
+  }
+
+  Future<void> _checkAdminLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isLoggedIn = prefs.getBool('is_admin_logged_in') ?? false;
+    if (isLoggedIn && mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    }
+  }
+
   Future<void> _loginAdmin() async {
     setState(() => _isLoading = true);
     try {
@@ -89,6 +106,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     onPressed: () async {
                       final prefs = await SharedPreferences.getInstance();
                       await prefs.setString('admin_selected_barber_id', barber.id);
+                      await prefs.setBool('is_admin_logged_in', true);
                       if (context.mounted) {
                         Navigator.pop(context); // Close dialog
                         Navigator.pushReplacement(

@@ -76,4 +76,24 @@ class NotificationService {
   Future<void> cancelNotification(int notificationId) async {
     await flutterLocalNotificationsPlugin.cancel(notificationId);
   }
+
+  Future<void> showImmediateNotification(
+      int notificationId, String title, String body) async {
+    await flutterLocalNotificationsPlugin.show(
+      notificationId,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'immediate_channel',
+          'Anlık Bildirimler',
+          channelDescription: 'Yeni randevu taleplerini bildirir',
+          importance: Importance.max,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+          color: Color(0xFFFFD700), // Gold
+        ),
+      ),
+    );
+  }
 }
