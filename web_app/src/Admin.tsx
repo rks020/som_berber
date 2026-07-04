@@ -121,11 +121,20 @@ import { startOfWeek, addDays, getHours, getDay } from 'date-fns';
 const AppointmentsManager = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedBarberId, setSelectedBarberId] = useState<string | null>(null);
 
   // Week navigation
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedSlot, setSelectedSlot] = useState<{date: Date, hour: number} | null>(null);
+  const [newApptCustomer, setNewApptCustomer] = useState('');
+  const [newApptService, setNewApptService] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -142,9 +151,42 @@ const AppointmentsManager = () => {
     const { data: bData } = await supabase.from('barbers').select('*');
     if (bData) setBarbers(bData);
 
+    const { data: cData } = await supabase.from('customers').select('*');
+    if (cData) setCustomers(cData);
+
+    const { data: sData } = await supabase.from('services').select('*');
+    if (sData) setServices(sData);
+
     const { data: aData } = await supabase.from('appointments').select('*').order('date_time', { ascending: false });
     if (aData) setAppointments(aData);
     setLoading(false);
+  };
+
+  const handleCreateAppointment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedSlot || !selectedBarberId || !newApptCustomer || !newApptService) return;
+    
+    setIsSubmitting(true);
+    const serviceDetails = services.find(s => s.id === newApptService);
+    const slotTime = new Date(selectedSlot.date);
+    slotTime.setHours(selectedSlot.hour, 0, 0, 0);
+
+    const id = crypto.randomUUID();
+    await supabase.from('appointments').insert({
+      id,
+      title: customers.find(c => c.id === newApptCustomer)?.name || 'Bilinmiyor',
+      category: serviceDetails?.name || '',
+      date_time: slotTime.toISOString(),
+      status: 'onaylandı',
+      customer_id: newApptCustomer,
+      barber_id: selectedBarberId
+    });
+
+    setNewApptCustomer('');
+    setNewApptService('');
+    setIsModalOpen(false);
+    await fetchData();
+    setIsSubmitting(false);
   };
 
   const handleUpdateStatus = async (id: string, status: string) => {
@@ -234,18 +276,22 @@ const AppointmentsManager = () => {
                 {days.map((day, dIdx) => {
                   const apps = getAppointmentsForSlot(day, hour);
                   return (
-                    <div key={dIdx} style={{ borderRight: '1px solid rgba(255,255,255,0.05)', padding: '4px', minHeight: '60px' }}>
+                    <div 
+                      key={dIdx} 
+                      onClick={() => { setSelectedSlot({ date: day, hour }); setIsModalOpen(true); }}
+                      style={{ borderRight: '1px solid rgba(255,255,255,0.05)', padding: '4px', minHeight: '60px', cursor: 'pointer' }}
+                    >
                       {apps.map(app => (
                         <div 
                           key={app.id} 
+                          onClick={(e) => e.stopPropagation()}
                           style={{ 
-                            background: app.status === 'bekliyor' ? '#ff9800' : 'var(--gold-primary)', 
+                            background: app.status === 'bekliyor' ? '#ff9800' : 'var(--primary-color)', 
                             color: '#000', 
                             padding: '6px', 
                             borderRadius: '4px', 
                             fontSize: '0.75rem', 
                             marginBottom: '4px',
-                            cursor: 'pointer',
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '4px'
@@ -269,6 +315,43 @@ const AppointmentsManager = () => {
           </div>
         </div>
       )}
+
+      {isModalOpen && selectedSlot && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="glass-panel" style={{ width: '400px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h3 style={{ margin: 0 }}>Yeni Randevu Ekle</h3>
+              <button onClick={() => setIsModalOpen(false)} style={{ background: 'transparent', padding: 0, color: 'var(--text-light)' }}><X size={24} /></button>
+            </div>
+            
+            <p style={{ color: 'var(--primary-color)', marginBottom: '16px' }}>
+              {format(selectedSlot.date, 'd MMMM yyyy', { locale: tr })} - {selectedSlot.hour.toString().padStart(2, '0')}:00
+            </p>
+
+            <form onSubmit={handleCreateAppointment}>
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Müşteri</label>
+                <select required value={newApptCustomer} onChange={e => setNewApptCustomer(e.target.value)}>
+                  <option value="">Seçiniz</option>
+                  {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              
+              <div className="form-group" style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', marginBottom: '8px' }}>Hizmet</label>
+                <select required value={newApptService} onChange={e => setNewApptService(e.target.value)}>
+                  <option value="">Seçiniz</option>
+                  {services.map(s => <option key={s.id} value={s.id}>{s.name} ({s.price}₺)</option>)}
+                </select>
+              </div>
+
+              <button type="submit" disabled={isSubmitting} style={{ width: '100%' }}>
+                {isSubmitting ? 'Kaydediliyor...' : 'Randevu Oluştur'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -280,6 +363,9 @@ const CustomersManager = () => {
   const [newPhone, setNewPhone] = useState('');
   const [newNotes, setNewNotes] = useState('');
   const [adding, setAdding] = useState(false);
+
+  // Modal State
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -342,16 +428,53 @@ const CustomersManager = () => {
       {loading ? <p>Yükleniyor...</p> : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
           {customers.map(c => (
-            <div key={c.id} className="glass-panel" style={{ position: 'relative' }}>
-              <h3 style={{ margin: '0 0 8px 0' }}>{c.name}</h3>
+            <div 
+              key={c.id} 
+              className="glass-panel" 
+              style={{ position: 'relative', cursor: 'pointer' }}
+              onClick={() => setSelectedCustomer(c)}
+            >
+              <h3 style={{ margin: '0 0 8px 0', color: 'var(--primary-color)' }}>{c.name}</h3>
               <p style={{ margin: 0, color: 'var(--text-muted)' }}>{c.phone}</p>
               <button 
-                onClick={() => handleDelete(c.id)}
+                onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }}
                 style={{ position: 'absolute', top: '16px', right: '16px', padding: '8px', background: 'transparent', color: '#ff4444' }}>
                 <Trash2 size={16} />
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {selectedCustomer && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="glass-panel" style={{ width: '400px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <h3 style={{ margin: 0, color: 'var(--primary-color)' }}>Müşteri Detayları</h3>
+              <button onClick={() => setSelectedCustomer(null)} style={{ background: 'transparent', padding: 0, color: 'var(--text-light)' }}><X size={24} /></button>
+            </div>
+            
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Ad Soyad</label>
+              <p style={{ margin: '4px 0 0 0', fontSize: '1.1rem' }}>{selectedCustomer.name}</p>
+            </div>
+            
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Telefon</label>
+              <p style={{ margin: '4px 0 0 0', fontSize: '1.1rem' }}>{selectedCustomer.phone}</p>
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Notlar / Tercihler</label>
+              <p style={{ margin: '4px 0 0 0', fontSize: '1.1rem' }}>{/* Since Customer type doesn't have notes, we omit it or type it as any */}
+                {(selectedCustomer as any).notes || 'Not bulunmuyor.'}
+              </p>
+            </div>
+
+            <button onClick={() => setSelectedCustomer(null)} style={{ width: '100%', background: 'var(--surface-color-light)', color: 'var(--text-light)' }}>
+              Kapat
+            </button>
+          </div>
         </div>
       )}
     </div>

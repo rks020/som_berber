@@ -300,8 +300,8 @@ function App() {
         </header>
         <main>
           <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/book/:barberId" element={<Booking />} />
+            <Route path="/" element={<div className="container"><Home /></div>} />
+            <Route path="/book/:barberId" element={<div className="container"><Booking /></div>} />
             <Route path="/admin/*" element={<Admin />} />
           </Routes>
         </main>
