@@ -256,21 +256,21 @@ const AppointmentsManager = () => {
 
       {loading ? <p>Yükleniyor...</p> : (
         <div className="glass-panel" style={{ padding: '0', overflowX: 'auto' }}>
-          <div style={{ minWidth: '800px', display: 'grid', gridTemplateColumns: '60px repeat(7, 1fr)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+          <div style={{ minWidth: '800px', display: 'grid', gridTemplateColumns: '50px repeat(7, 1fr)', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
             {/* Header */}
-            <div style={{ padding: '16px', borderRight: '1px solid rgba(255,255,255,0.05)' }}></div>
+            <div style={{ padding: '8px', borderRight: '1px solid rgba(255,255,255,0.05)' }}></div>
             {days.map((day, i) => (
-              <div key={i} style={{ padding: '16px', textAlign: 'center', fontWeight: 'bold', color: 'var(--gold-primary)', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
-                {format(day, 'EEE', { locale: tr })}<br/>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{format(day, 'd MMM', { locale: tr })}</span>
+              <div key={i} style={{ padding: '8px', textAlign: 'center', fontWeight: 'bold', color: 'var(--gold-primary)', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
+                <span style={{ fontSize: '0.8rem' }}>{format(day, 'EEE', { locale: tr })}</span><br/>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{format(day, 'd MMM', { locale: tr })}</span>
               </div>
             ))}
           </div>
 
           <div style={{ minWidth: '800px' }}>
             {hours.map(hour => (
-              <div key={hour} style={{ display: 'grid', gridTemplateColumns: '60px repeat(7, 1fr)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <div style={{ padding: '12px', fontSize: '0.8rem', color: 'var(--text-muted)', borderRight: '1px solid rgba(255,255,255,0.05)', textAlign: 'right' }}>
+              <div key={hour} style={{ display: 'grid', gridTemplateColumns: '50px repeat(7, 1fr)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ padding: '8px', fontSize: '0.7rem', color: 'var(--text-muted)', borderRight: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
                   {hour.toString().padStart(2, '0')}:00
                 </div>
                 {days.map((day, dIdx) => {
@@ -279,31 +279,36 @@ const AppointmentsManager = () => {
                     <div 
                       key={dIdx} 
                       onClick={() => { setSelectedSlot({ date: day, hour }); setIsModalOpen(true); }}
-                      style={{ borderRight: '1px solid rgba(255,255,255,0.05)', padding: '4px', minHeight: '60px', cursor: 'pointer' }}
+                      style={{ borderRight: '1px solid rgba(255,255,255,0.05)', padding: '2px', minHeight: '40px', cursor: 'pointer' }}
                     >
                       {apps.map(app => (
                         <div 
                           key={app.id} 
                           onClick={(e) => e.stopPropagation()}
+                          title={`${app.title} - ${app.category}`}
                           style={{ 
                             background: app.status === 'bekliyor' ? '#ff9800' : 'var(--primary-color)', 
                             color: '#000', 
-                            padding: '6px', 
+                            padding: '4px', 
                             borderRadius: '4px', 
-                            fontSize: '0.75rem', 
-                            marginBottom: '4px',
+                            marginBottom: '2px',
                             display: 'flex',
-                            flexDirection: 'column',
-                            gap: '4px'
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
                           }}
                         >
-                          <div style={{ fontWeight: 'bold' }}>{app.title}</div>
-                          <div>{app.category}</div>
-                          <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                          <div style={{ fontWeight: 'bold', fontSize: '0.65rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {app.title} - {app.category}
+                          </div>
+                          <div style={{ display: 'flex', gap: '4px' }}>
                             {app.status === 'bekliyor' && (
-                              <button onClick={() => handleUpdateStatus(app.id, 'onaylandı')} style={{ background: '#4caf50', color: 'white', padding: '2px 4px', fontSize: '10px', flex: 1 }}>Onayla</button>
+                              <button onClick={() => handleUpdateStatus(app.id, 'onaylandı')} style={{ background: 'transparent', padding: '0', color: '#000', border: 'none' }}>
+                                <Check size={12} />
+                              </button>
                             )}
-                            <button onClick={() => handleDelete(app.id)} style={{ background: '#ff4444', color: 'white', padding: '2px 4px', fontSize: '10px', flex: 1 }}>Sil</button>
+                            <button onClick={() => handleDelete(app.id)} style={{ background: 'transparent', padding: '0', color: '#ff4444', border: 'none' }}>
+                              <X size={12} />
+                            </button>
                           </div>
                         </div>
                       ))}

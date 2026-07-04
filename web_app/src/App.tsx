@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Scissors, Calendar, Clock, User, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { format, addDays, startOfDay, isSameDay } from 'date-fns';
@@ -287,10 +287,13 @@ const Booking = () => {
   );
 };
 
-function App() {
+const AppContent = () => {
+  const location = useLocation();
+  const isAdmin = location.pathname.startsWith('/admin');
+
   return (
-    <Router>
-      <div className="app-container">
+    <div className="app-container">
+      {!isAdmin && (
         <header>
           <div className="logo">
             <img src="/logo.png" alt="Logo" style={{ width: '40px', height: '40px', borderRadius: '8px' }} />
@@ -298,14 +301,22 @@ function App() {
           </div>
           <div style={{ color: 'var(--text-muted)' }}>Müşteri Randevu Sistemi</div>
         </header>
-        <main>
-          <Routes>
-            <Route path="/" element={<div className="container"><Home /></div>} />
-            <Route path="/book/:barberId" element={<div className="container"><Booking /></div>} />
-            <Route path="/admin/*" element={<Admin />} />
-          </Routes>
-        </main>
-      </div>
+      )}
+      <main style={{ padding: isAdmin ? 0 : undefined }}>
+        <Routes>
+          <Route path="/" element={<div className="container"><Home /></div>} />
+          <Route path="/book/:barberId" element={<div className="container"><Booking /></div>} />
+          <Route path="/admin/*" element={<Admin />} />
+        </Routes>
+      </main>
+    </div>
+  );
+};
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }
