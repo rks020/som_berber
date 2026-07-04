@@ -134,7 +134,11 @@ const AppointmentsManager = () => {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingAppointmentId, setEditingAppointmentId] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<{date: Date, hour: number} | null>(null);
+  
+  // Custom Delete Confirm State
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   
   // Form fields
   const [newTitle, setNewTitle] = useState('');
@@ -185,9 +189,7 @@ const AppointmentsManager = () => {
 
     const matchedCustomer = customers.find(c => c.name.toLowerCase() === newTitle.toLowerCase());
 
-    const id = crypto.randomUUID();
-    await supabase.from('appointments').insert({
-      id,
+    const payload = {
       title: newTitle,
       category: serviceNames || '',
       date_time: dt.toISOString(),
@@ -198,9 +200,17 @@ const AppointmentsManager = () => {
       price: Number(newPrice) || 0,
       additional_people: newOthers,
       color_hex: newColor
-    });
+    };
+
+    if (editingAppointmentId) {
+      await supabase.from('appointments').update(payload).eq('id', editingAppointmentId);
+    } else {
+      const id = crypto.randomUUID();
+      await supabase.from('appointments').insert({ id, ...payload });
+    }
 
     setIsModalOpen(false);
+    setEditingAppointmentId(null);
     await fetchData();
     setIsSubmitting(false);
   };
@@ -211,8 +221,13 @@ const AppointmentsManager = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if(confirm('Emin misiniz?')) {
-      await supabase.from('appointments').delete().eq('id', id);
+    setDeleteConfirmId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (deleteConfirmId) {
+      await supabase.from('appointments').delete().eq('id', deleteConfirmId);
+      setDeleteConfirmId(null);
       fetchData();
     }
   };
@@ -288,7 +303,7 @@ const AppointmentsManager = () => {
             {/* Hours column */}
             <div style={{ width: '50px', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
               {hours.map(hour => (
-                <div key={hour} style={{ height: '48px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '4px', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                <div key={hour} style={{ height: '48px', boxSizing: 'border-box', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '4px', fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                   {hour.toString().padStart(2, '0')}:00
                 </div>
               ))}
@@ -311,6 +326,7 @@ const AppointmentsManager = () => {
                       key={hour}
                       onClick={() => {
                         setSelectedSlot({ date: day, hour });
+                        setEditingAppointmentId(null);
                         setNewDate(format(day, 'yyyy-MM-dd'));
                         setNewTime(hour.toString().padStart(2, '0') + ':00');
                         setNewTitle('');
@@ -322,7 +338,7 @@ const AppointmentsManager = () => {
                         setIsCategoryDropdownOpen(false);
                         setIsModalOpen(true); 
                       }}
-                      style={{ height: '48px', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }}
+                      style={{ height: '48px', boxSizing: 'border-box', borderBottom: '1px solid rgba(255,255,255,0.05)', cursor: 'pointer' }}
                     />
                   ))}
                   
@@ -337,7 +353,27 @@ const AppointmentsManager = () => {
                     return (
                       <div 
                         key={app.id} 
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedSlot(null);
+                          setEditingAppointmentId(app.id);
+                          setNewTitle(app.title);
+                          setNewDate(format(appDate, 'yyyy-MM-dd'));
+                          setNewTime(format(appDate, 'HH:mm'));
+                          setNewDuration(app.duration_minutes || 60);
+                          setNewPrice(app.price || '');
+                          setNewOthers(app.additional_people || '');
+                          setNewColor(app.color_hex || '#ff9800');
+                          
+                          // match services by name (approximate, since we stored a comma separated string)
+                          const matchedServiceIds = services
+                            .filter(s => (app.category || '').includes(s.name))
+                            .map(s => s.id);
+                          setNewApptServices(matchedServiceIds);
+                          
+                          setIsCategoryDropdownOpen(false);
+                          setIsModalOpen(true);
+                        }}
                         title={`${app.title} - ${app.category}`}
                         style={{ 
                           position: 'absolute',
@@ -361,11 +397,11 @@ const AppointmentsManager = () => {
                         </div>
                         <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', marginTop: 'auto' }}>
                           {app.status === 'bekliyor' && (
-                            <button onClick={() => handleUpdateStatus(app.id, 'onaylandı')} style={{ background: 'rgba(0,0,0,0.1)', padding: '2px', color: '#000', border: 'none', borderRadius: '4px' }}>
+                            <button onClick={(e) => { e.stopPropagation(); handleUpdateStatus(app.id, 'onaylandı'); }} style={{ background: 'rgba(0,0,0,0.1)', padding: '2px', color: '#000', border: 'none', borderRadius: '4px' }}>
                               <Check size={12} />
                             </button>
                           )}
-                          <button onClick={() => handleDelete(app.id)} style={{ background: 'rgba(0,0,0,0.1)', padding: '2px', color: '#ff4444', border: 'none', borderRadius: '4px' }}>
+                          <button onClick={(e) => { e.stopPropagation(); handleDelete(app.id); }} style={{ background: 'rgba(0,0,0,0.1)', padding: '2px', color: '#ff4444', border: 'none', borderRadius: '4px' }}>
                             <X size={12} />
                           </button>
                         </div>
@@ -383,8 +419,8 @@ const AppointmentsManager = () => {
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div className="glass-panel" style={{ width: '400px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-              <h3 style={{ margin: 0 }}>Yeni Randevu</h3>
-              <button onClick={() => setIsModalOpen(false)} style={{ background: 'transparent', padding: 0, color: 'var(--text-light)', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
+              <h3 style={{ margin: 0 }}>{editingAppointmentId ? 'Randevuyu Düzenle' : 'Yeni Randevu'}</h3>
+              <button onClick={() => { setIsModalOpen(false); setEditingAppointmentId(null); }} style={{ background: 'transparent', padding: 0, color: 'var(--text-light)', border: 'none', cursor: 'pointer' }}><X size={24} /></button>
             </div>
 
             <form onSubmit={handleCreateAppointment}>
@@ -514,10 +550,28 @@ const AppointmentsManager = () => {
                 </div>
               </div>
 
-              <button type="submit" disabled={isSubmitting} style={{ width: '100%', padding: '12px', fontWeight: 'bold' }}>
-                {isSubmitting ? 'Kaydediliyor...' : 'Randevu Oluştur'}
+              <button type="submit" disabled={isSubmitting} style={{ width: '100%', marginTop: '12px' }}>
+                {isSubmitting ? 'Kaydediliyor...' : 'Kaydet'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000, padding: '20px' }}>
+          <div className="glass-panel" style={{ width: '300px', textAlign: 'center' }}>
+            <h3 style={{ marginBottom: '16px', color: '#ff4444' }}>Silmek İstediğinizden Emin Misiniz?</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '0.9rem' }}>Bu işlem geri alınamaz.</p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button onClick={() => setDeleteConfirmId(null)} style={{ flex: 1, background: 'rgba(255,255,255,0.1)', color: 'white' }}>
+                İptal
+              </button>
+              <button onClick={confirmDelete} style={{ flex: 1, background: '#ff4444', color: 'white' }}>
+                Sil
+              </button>
+            </div>
           </div>
         </div>
       )}
