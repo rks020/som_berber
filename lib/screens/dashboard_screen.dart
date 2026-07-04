@@ -567,10 +567,10 @@ class DashboardScreen extends StatelessWidget {
 
                         final visit = Visit(
                           id: DateTime.now().millisecondsSinceEpoch.toString(),
-                          customerId: '',
+                          customerId: appt.customerId ?? '',
                           customerName: appt.title,
-                          barberId: provider.barbers.isNotEmpty ? provider.barbers.first.id : '',
-                          serviceIds: [],
+                          barberId: appt.barberId ?? '',
+                          serviceIds: const [],
                           serviceNames: [appt.category],
                           servicePrices: [price],
                           totalPrice: price,

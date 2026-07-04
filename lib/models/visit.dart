@@ -66,38 +66,32 @@ class Visit {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'customerId': customerId,
-      'customerName': customerName,
-      'barberId': barberId,
-      'serviceIds': serviceIds,
-      'serviceNames': serviceNames,
-      'servicePrices': servicePrices,
-      'totalPrice': totalPrice,
-      'paymentMethod': paymentMethod,
-      'dateTime': dateTime.toIso8601String(),
-      'notes': notes,
+      'customer_id': customerId.isNotEmpty ? customerId : null,
+      'barber_id': barberId.isNotEmpty ? barberId : null,
+      'date_time': dateTime.toUtc().toIso8601String(),
+      'total_price': totalPrice,
+      'payment_method': paymentMethod,
+      'photo_path': photoPath,
       'status': status,
-      'photoPath': photoPath,
+      'services': serviceNames, // stored as jsonb array of strings in DB
     };
   }
 
   factory Visit.fromMap(Map<dynamic, dynamic> map) {
     return Visit(
       id: map['id'] as String,
-      customerId: map['customerId'] as String,
-      customerName: map['customerName'] as String,
-      barberId: map['barberId'] as String,
-      serviceIds: List<String>.from(map['serviceIds'] as List),
-      serviceNames: List<String>.from(map['serviceNames'] as List),
-      servicePrices: (map['servicePrices'] as List)
-          .map((e) => (e as num).toDouble())
-          .toList(),
-      totalPrice: (map['totalPrice'] as num).toDouble(),
-      paymentMethod: map['paymentMethod'] as String,
-      dateTime: DateTime.parse(map['dateTime'] as String),
-      notes: (map['notes'] ?? '') as String,
+      customerId: (map['customer_id'] ?? '') as String,
+      customerName: '', // Lookup dynamically if needed
+      barberId: (map['barber_id'] ?? '') as String,
+      serviceIds: const [],
+      serviceNames: map['services'] != null ? List<String>.from(map['services'] as List) : const [],
+      servicePrices: const [],
+      totalPrice: (map['total_price'] as num?)?.toDouble() ?? 0.0,
+      paymentMethod: (map['payment_method'] ?? '') as String,
+      dateTime: DateTime.parse(map['date_time'] as String).toLocal(),
+      notes: '',
       status: (map['status'] ?? 'Tamamlandı') as String,
-      photoPath: map['photoPath'] as String?,
+      photoPath: map['photo_path'] as String?,
     );
   }
 }
