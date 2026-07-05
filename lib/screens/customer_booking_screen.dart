@@ -20,7 +20,7 @@ class CustomerBookingScreen extends StatefulWidget {
 class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
   DateTime _selectedDate = DateTime.now();
   String? _selectedTime;
-  Service? _selectedService;
+  List<Service> _selectedServices = [];
   
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -103,7 +103,7 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
       return;
     }
 
-    if (_selectedTime == null || _selectedService == null || _nameController.text.isEmpty || _phoneController.text.isEmpty) {
+    if (_selectedTime == null || _selectedServices.isEmpty || _nameController.text.isEmpty || _phoneController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Lütfen tüm alanları doldurun')),
       );
@@ -155,13 +155,16 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
         minute,
       );
 
+      final combinedCategory = _selectedServices.map((s) => s.name).join(', ');
+      final totalCombinedPrice = _selectedServices.fold<double>(0.0, (sum, s) => sum + s.price);
+
       final newApp = AppointmentModel(
         id: const Uuid().v4(),
         title: _nameController.text.trim(),
-        category: _selectedService!.name,
+        category: combinedCategory,
         dateTime: appTime,
         durationMinutes: 60, // 1 hour slot
-        price: _selectedService!.price,
+        price: totalCombinedPrice,
         colorHex: '#4CAF50', // Green for pending
         status: 'bekliyor',
         customerId: customerId,
@@ -206,7 +209,10 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
                 IconButton(
                   icon: const Icon(Icons.chevron_left),
                   onPressed: () {
-                    final newDate = _selectedDate.subtract(const Duration(days: 1));
+                    DateTime newDate = _selectedDate.subtract(const Duration(days: 1));
+                    if (newDate.weekday == DateTime.sunday) {
+                      newDate = newDate.subtract(const Duration(days: 1));
+                    }
                     if (!newDate.isBefore(DateTime.now().subtract(const Duration(days: 1)))) {
                       setState(() {
                         _selectedDate = newDate;
@@ -215,15 +221,37 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
                     }
                   },
                 ),
-                Text(
-                  DateFormat('d MMMM yyyy', 'tr_TR').format(_selectedDate),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Column(
+                  children: [
+                    Text(
+                      DateFormat('d MMMM yyyy', 'tr_TR').format(_selectedDate),
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    if (_selectedDate.weekday == DateTime.sunday)
+                      Container(
+                        margin: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.red.withOpacity(0.4)),
+                        ),
+                        child: const Text(
+                          '🚫 Kapalı',
+                          style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                  ],
                 ),
                 IconButton(
                   icon: const Icon(Icons.chevron_right),
                   onPressed: () {
+                    DateTime newDate = _selectedDate.add(const Duration(days: 1));
+                    if (newDate.weekday == DateTime.sunday) {
+                      newDate = newDate.add(const Duration(days: 1));
+                    }
                     setState(() {
-                      _selectedDate = _selectedDate.add(const Duration(days: 1));
+                      _selectedDate = newDate;
                       _selectedTime = null;
                     });
                   },
@@ -320,20 +348,38 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
                 keyboardType: TextInputType.phone,
               ),
               const SizedBox(height: 16),
-              DropdownButtonFormField<Service>(
-                decoration: const InputDecoration(
-                  labelText: 'Hizmet Seçimi',
-                  border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.content_cut),
+              const Text('Hizmet Seçimi (Birden fazla seçebilirsiniz)', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.04),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white10),
                 ),
-                value: _selectedService,
-                items: provider.services.map((s) {
-                  return DropdownMenuItem(
-                    value: s,
-                    child: Text('${s.name} - ${s.price} ₺'),
-                  );
-                }).toList(),
-                onChanged: (val) => setState(() => _selectedService = val),
+                constraints: const BoxConstraints(maxHeight: 200),
+                child: ListView(
+                  shrinkWrap: true,
+                  physics: const ClampingScrollPhysics(),
+                  children: provider.services.map((s) {
+                    final isChecked = _selectedServices.any((item) => item.id == s.id);
+                    return CheckboxListTile(
+                      activeColor: Colors.amber,
+                      checkColor: Colors.black,
+                      title: Text(s.name, style: const TextStyle(fontSize: 14, color: Colors.white)),
+                      subtitle: Text('${s.price} ₺', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                      value: isChecked,
+                      onChanged: (bool? checked) {
+                        setState(() {
+                          if (checked == true) {
+                            _selectedServices.add(s);
+                          } else {
+                            _selectedServices.removeWhere((item) => item.id == s.id);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
               ),
               const SizedBox(height: 32),
               

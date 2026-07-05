@@ -28,10 +28,10 @@ class _HomeScreenState extends State<HomeScreen> {
     ServicesScreen(),
   ];
 
-  void _showPendingRequestDialog(BuildContext context, SalonProvider provider, AppointmentModel app) {
-    showDialog(
+  Future<void> _showPendingRequestDialog(BuildContext context, SalonProvider provider, AppointmentModel app) async {
+    await showDialog(
       context: context,
-      barrierDismissible: false,
+      barrierDismissible: true,
       builder: (context) {
         final timeFormat = DateFormat('dd.MM.yyyy HH:mm');
         return AlertDialog(
@@ -55,10 +55,8 @@ class _HomeScreenState extends State<HomeScreen> {
           actions: [
             TextButton(
               onPressed: () async {
-                setState(() => _isDialogShowing = false);
-                await provider.deleteAppointment(app.id);
-                provider.clearPendingRequestNotification();
                 if (context.mounted) Navigator.pop(context);
+                await provider.deleteAppointment(app.id);
               },
               child: const Text('Reddet', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
             ),
@@ -88,25 +86,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   selectedTime.minute,
                 );
 
-                setState(() => _isDialogShowing = false);
+                if (context.mounted) Navigator.pop(context);
                 final updated = app.copyWith(
                   dateTime: newDateTime,
                   status: 'saat_onerildi',
                 );
                 await provider.updateAppointment(updated);
-                provider.clearPendingRequestNotification();
-                if (context.mounted) Navigator.pop(context);
               },
               child: const Text('Saat Öner', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
               onPressed: () async {
-                setState(() => _isDialogShowing = false);
+                if (context.mounted) Navigator.pop(context);
                 final approved = app.copyWith(status: 'onaylandı');
                 await provider.updateAppointment(approved);
-                provider.clearPendingRequestNotification();
-                if (context.mounted) Navigator.pop(context);
               },
               child: const Text('Onayla', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
@@ -123,8 +117,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (pendingApp != null && !_isDialogShowing) {
       _isDialogShowing = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _showPendingRequestDialog(context, provider, pendingApp);
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        await _showPendingRequestDialog(context, provider, pendingApp);
+        if (mounted) {
+          setState(() {
+            _isDialogShowing = false;
+          });
+        }
+        provider.clearPendingRequestNotification();
       });
     }
 

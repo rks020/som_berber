@@ -154,9 +154,9 @@ class SalonProvider extends ChangeNotifier {
                   final app = AppointmentModel.fromMap(newRecord);
                   if (app.status == 'bekliyor') {
                     SharedPreferences.getInstance().then((prefs) {
-                      final savedCustomerId = prefs.getString('saved_customer_id');
-                      debugPrint('Insert event: savedCustomerId=$savedCustomerId');
-                      if (savedCustomerId == null) {
+                      final isAdmin = prefs.getBool('is_admin_logged_in') ?? false;
+                      debugPrint('Insert event: isAdmin=$isAdmin');
+                      if (isAdmin) {
                         // Trigger immediate local notification for admin
                         NotificationService().showImmediateNotification(
                           app.id.hashCode,
