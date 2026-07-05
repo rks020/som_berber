@@ -214,7 +214,7 @@ const AppointmentsManager = () => {
 
   const handleRejectPending = async () => {
     if (!pendingRequest) return;
-    await supabase.from('appointments').delete().eq('id', pendingRequest.id);
+    await supabase.from('appointments').update({ status: 'reddedildi' }).eq('id', pendingRequest.id);
     setPendingRequest(null);
     fetchData();
   };

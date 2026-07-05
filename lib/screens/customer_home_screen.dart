@@ -280,6 +280,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                           );
 
                           String statusText = '';
+                          String? warningMessage;
                           Color statusColor = Colors.grey;
                           Widget? actions;
 
@@ -325,7 +326,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                               onPressed: () => _confirmCancel(context, provider, app),
                             );
                           } else if (app.status == 'reddedildi') {
-                            statusText = 'Talebiniz berber tarafından reddedildi. Lütfen kendisi ile iletişime geçin.';
+                            statusText = 'Reddedildi';
+                            warningMessage = 'Talebiniz berber tarafından reddedildi. Lütfen kendisi ile iletişime geçin.';
                             statusColor = Colors.red;
                             actions = TextButton.icon(
                               icon: const Icon(Icons.delete_outline, color: Colors.grey, size: 14),
@@ -333,7 +335,8 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                               onPressed: () => provider.deleteAppointment(app.id),
                             );
                           } else if (app.status == 'iptal') {
-                            statusText = 'İptal Ettiğiniz Randevu';
+                            statusText = 'İptal Edildi';
+                            warningMessage = 'İptal Ettiğiniz Randevu';
                             statusColor = Colors.redAccent;
                             actions = TextButton.icon(
                               icon: const Icon(Icons.delete_outline, color: Colors.grey, size: 14),
@@ -377,6 +380,13 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                                     ),
                                   ],
                                 ),
+                                if (warningMessage != null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    warningMessage,
+                                    style: TextStyle(color: statusColor, fontSize: 12),
+                                  ),
+                                ],
                                 const SizedBox(height: 6),
                                 Text(
                                   'Berber: ${barber.name}',
