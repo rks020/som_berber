@@ -9,6 +9,7 @@ class AppointmentModel {
   final String colorHex;
   final String status;
   final bool isDismissedFromRequests;
+  final bool isDismissedByCustomer;
   final String? customerId;
   final String? barberId;
 
@@ -23,6 +24,7 @@ class AppointmentModel {
     required this.colorHex,
     this.status = 'onaylandı',
     this.isDismissedFromRequests = false,
+    this.isDismissedByCustomer = false,
     this.customerId,
     this.barberId,
   });
@@ -38,6 +40,7 @@ class AppointmentModel {
     String? colorHex,
     String? status,
     bool? isDismissedFromRequests,
+    bool? isDismissedByCustomer,
     String? customerId,
     String? barberId,
   }) {
@@ -52,6 +55,7 @@ class AppointmentModel {
       colorHex: colorHex ?? this.colorHex,
       status: status ?? this.status,
       isDismissedFromRequests: isDismissedFromRequests ?? this.isDismissedFromRequests,
+      isDismissedByCustomer: isDismissedByCustomer ?? this.isDismissedByCustomer,
       customerId: customerId ?? this.customerId,
       barberId: barberId ?? this.barberId,
     );
@@ -69,6 +73,7 @@ class AppointmentModel {
       'color_hex': colorHex,
       'status': status,
       'is_dismissed_from_requests': isDismissedFromRequests,
+      'is_dismissed_by_customer': isDismissedByCustomer,
       'customer_id': customerId,
       'barber_id': barberId,
     };
@@ -86,6 +91,7 @@ class AppointmentModel {
       colorHex: map['color_hex'] as String? ?? '#000000',
       status: map['status'] as String? ?? 'onaylandı',
       isDismissedFromRequests: map['is_dismissed_from_requests'] as bool? ?? false,
+      isDismissedByCustomer: map['is_dismissed_by_customer'] as bool? ?? false,
       customerId: map['customer_id'] as String?,
       barberId: map['barber_id'] as String?,
     );

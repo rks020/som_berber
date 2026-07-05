@@ -124,7 +124,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
           final myAppointments = _customerId == null
               ? <AppointmentModel>[]
-              : provider.appointments.where((a) => a.customerId == _customerId).toList()
+              : provider.appointments.where((a) => a.customerId == _customerId && !a.isDismissedByCustomer).toList()
             ..sort((a, b) => b.dateTime.compareTo(a.dateTime));
 
           return SingleChildScrollView(
@@ -332,7 +332,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                             actions = TextButton.icon(
                               icon: const Icon(Icons.delete_outline, color: Colors.grey, size: 14),
                               label: const Text('Bu Kaydı Sil', style: TextStyle(color: Colors.grey, fontSize: 11)),
-                              onPressed: () => provider.deleteAppointment(app.id),
+                              onPressed: () => provider.updateAppointment(app.copyWith(isDismissedByCustomer: true)),
                             );
                           } else if (app.status == 'iptal') {
                             statusText = 'İptal Edildi';
@@ -341,7 +341,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                             actions = TextButton.icon(
                               icon: const Icon(Icons.delete_outline, color: Colors.grey, size: 14),
                               label: const Text('Bu Kaydı Sil', style: TextStyle(color: Colors.grey, fontSize: 11)),
-                              onPressed: () => provider.deleteAppointment(app.id),
+                              onPressed: () => provider.updateAppointment(app.copyWith(isDismissedByCustomer: true)),
                             );
                           } else {
                             statusText = app.status;
