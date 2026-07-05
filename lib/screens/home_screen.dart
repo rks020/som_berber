@@ -56,7 +56,7 @@ class _HomeScreenState extends State<HomeScreen> {
             TextButton(
               onPressed: () async {
                 if (context.mounted) Navigator.pop(context);
-                await provider.deleteAppointment(app.id);
+                await provider.updateAppointment(app.copyWith(status: 'reddedildi'));
               },
               child: const Text('Reddet', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
             ),
