@@ -5,6 +5,7 @@ class Customer {
   final String notes;
   final DateTime createdAt;
   final String? profilePicturePath;
+  final String? fcmToken;
 
   Customer({
     required this.id,
@@ -13,6 +14,7 @@ class Customer {
     this.notes = '',
     required this.createdAt,
     this.profilePicturePath,
+    this.fcmToken,
   });
 
   Customer copyWith({
@@ -22,6 +24,7 @@ class Customer {
     String? notes,
     DateTime? createdAt,
     String? profilePicturePath,
+    String? fcmToken,
   }) {
     return Customer(
       id: id ?? this.id,
@@ -30,6 +33,7 @@ class Customer {
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       profilePicturePath: profilePicturePath ?? this.profilePicturePath,
+      fcmToken: fcmToken ?? this.fcmToken,
     );
   }
 
@@ -41,6 +45,7 @@ class Customer {
       'notes': notes,
       'created_at': createdAt.toIso8601String(),
       'profile_picture_path': profilePicturePath,
+      'fcm_token': fcmToken,
     };
   }
 
@@ -52,6 +57,7 @@ class Customer {
       notes: (map['notes'] ?? '') as String,
       createdAt: DateTime.parse(map['created_at'] as String),
       profilePicturePath: map['profile_picture_path'] as String?,
+      fcmToken: map['fcm_token'] as String?,
     );
   }
 }

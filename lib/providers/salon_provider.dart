@@ -63,6 +63,15 @@ class SalonProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> reloadData() async {
+    try {
+      await _fetchInitialData();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error reloading data: $e');
+    }
+  }
+
   Future<void> _fetchInitialData() async {
     final cRes = await _supabase.from('customers').select();
     _customers = cRes.map((e) => Customer.fromMap(e)).toList()
@@ -155,14 +164,7 @@ class SalonProvider extends ChangeNotifier {
                   if (app.status == 'bekliyor') {
                     SharedPreferences.getInstance().then((prefs) {
                       final isAdmin = prefs.getBool('is_admin_logged_in') ?? false;
-                      debugPrint('Insert event: isAdmin=$isAdmin');
                       if (isAdmin) {
-                        // Trigger immediate local notification for admin
-                        NotificationService().showImmediateNotification(
-                          app.id.hashCode,
-                          '🔔 Yeni Randevu Talebi!',
-                          '${app.title} - ${app.category} için onay bekliyor.',
-                        );
                         pendingRequestNotification = app;
                         _unreadRequestsCount++;
                         notifyListeners();
@@ -178,39 +180,6 @@ class SalonProvider extends ChangeNotifier {
                 if (newRecord != null) {
                   final app = AppointmentModel.fromMap(newRecord);
                   debugPrint('Update event: app.id=${app.id}, app.status=${app.status}');
-                  
-                  if (oldApp != null) {
-                    debugPrint('Comparing oldApp status (${oldApp.status}) vs new status (${app.status})');
-                    if (oldApp.status != 'onaylandı' && app.status == 'onaylandı') {
-                      SharedPreferences.getInstance().then((prefs) {
-                        final savedCustomerId = prefs.getString('saved_customer_id');
-                        debugPrint('Notification check: savedCustomerId=$savedCustomerId, app.customerId=${app.customerId}');
-                        if (savedCustomerId != null && savedCustomerId == app.customerId) {
-                          debugPrint('Triggering approved notification!');
-                          NotificationService().showImmediateNotification(
-                            app.id.hashCode,
-                            '📅 Randevunuz Onaylandı!',
-                            '${app.category} randevu talebiniz berber tarafından onaylandı.',
-                          );
-                        }
-                      });
-                    } else if (oldApp.status != 'saat_onerildi' && app.status == 'saat_onerildi') {
-                      SharedPreferences.getInstance().then((prefs) {
-                        final savedCustomerId = prefs.getString('saved_customer_id');
-                        debugPrint('Notification check: savedCustomerId=$savedCustomerId, app.customerId=${app.customerId}');
-                        if (savedCustomerId != null && savedCustomerId == app.customerId) {
-                          debugPrint('Triggering new time notification!');
-                          NotificationService().showImmediateNotification(
-                            app.id.hashCode,
-                            '⏰ Yeni Saat Önerisi',
-                            'Berberiniz randevu için yeni bir saat önerdi. Kontrol etmek için tıklayın.',
-                          );
-                        }
-                      });
-                    }
-                  } else {
-                    debugPrint('oldApp was null, cannot compare status change.');
-                  }
                 }
               }
             });

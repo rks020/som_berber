@@ -8,6 +8,8 @@ import '../providers/salon_provider.dart';
 import '../models/appointment.dart';
 import '../models/barber.dart';
 import 'customer_booking_screen.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CustomerHomeScreen extends StatefulWidget {
   const CustomerHomeScreen({super.key});
@@ -27,9 +29,24 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
 
   Future<void> _loadCustomerId() async {
     final prefs = await SharedPreferences.getInstance();
+    final cId = prefs.getString('saved_customer_id');
     setState(() {
-      _customerId = prefs.getString('saved_customer_id');
+      _customerId = cId;
     });
+
+    if (cId != null) {
+      try {
+        final token = await FirebaseMessaging.instance.getToken();
+        if (token != null) {
+          await Supabase.instance.client
+              .from('customers')
+              .update({'fcm_token': token})
+              .eq('id', cId);
+        }
+      } catch (e) {
+        debugPrint('FCM Token update error: $e');
+      }
+    }
   }
 
   Future<void> _launchWhatsApp(String phone) async {
@@ -53,7 +70,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
     }
   }
 
-  void _confirmCancel(BuildContext context, SalonProvider provider, String appointmentId) {
+  void _confirmCancel(BuildContext context, SalonProvider provider, AppointmentModel app) {
     showDialog(
       context: context,
       builder: (context) {
@@ -68,7 +85,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
             ),
             TextButton(
               onPressed: () {
-                provider.deleteAppointment(appointmentId);
+                provider.updateAppointment(app.copyWith(status: 'iptal'));
                 Navigator.pop(context);
               },
               child: const Text('Evet, İptal Et', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
@@ -272,7 +289,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                             actions = TextButton.icon(
                               icon: const Icon(Icons.cancel_outlined, color: Colors.redAccent, size: 14),
                               label: const Text('Talebi İptal Et', style: TextStyle(color: Colors.redAccent, fontSize: 11)),
-                              onPressed: () => _confirmCancel(context, provider, app.id),
+                              onPressed: () => _confirmCancel(context, provider, app),
                             );
                           } else if (app.status == 'saat_onerildi') {
                             statusText = 'Yeni Saat Önerildi';
@@ -281,7 +298,7 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 TextButton(
-                                  onPressed: () => provider.deleteAppointment(app.id),
+                                  onPressed: () => provider.updateAppointment(app.copyWith(status: 'iptal')),
                                   child: const Text('Reddet', style: TextStyle(color: Colors.redAccent, fontSize: 11, fontWeight: FontWeight.bold)),
                                 ),
                                 const SizedBox(width: 8),
@@ -305,7 +322,23 @@ class _CustomerHomeScreenState extends State<CustomerHomeScreen> {
                             actions = TextButton.icon(
                               icon: const Icon(Icons.cancel_outlined, color: Colors.redAccent, size: 14),
                               label: const Text('Randevuyu İptal Et', style: TextStyle(color: Colors.redAccent, fontSize: 11)),
-                              onPressed: () => _confirmCancel(context, provider, app.id),
+                              onPressed: () => _confirmCancel(context, provider, app),
+                            );
+                          } else if (app.status == 'reddedildi') {
+                            statusText = 'Talebiniz berber tarafından reddedildi. Lütfen kendisi ile iletişime geçin.';
+                            statusColor = Colors.red;
+                            actions = TextButton.icon(
+                              icon: const Icon(Icons.delete_outline, color: Colors.grey, size: 14),
+                              label: const Text('Bu Kaydı Sil', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                              onPressed: () => provider.deleteAppointment(app.id),
+                            );
+                          } else if (app.status == 'iptal') {
+                            statusText = 'İptal Ettiğiniz Randevu';
+                            statusColor = Colors.redAccent;
+                            actions = TextButton.icon(
+                              icon: const Icon(Icons.delete_outline, color: Colors.grey, size: 14),
+                              label: const Text('Bu Kaydı Sil', style: TextStyle(color: Colors.grey, fontSize: 11)),
+                              onPressed: () => provider.deleteAppointment(app.id),
                             );
                           } else {
                             statusText = app.status;

@@ -8,6 +8,7 @@ class AppointmentModel {
   final String additionalPeople;
   final String colorHex;
   final String status;
+  final bool isDismissedFromRequests;
   final String? customerId;
   final String? barberId;
 
@@ -21,6 +22,7 @@ class AppointmentModel {
     this.additionalPeople = '',
     required this.colorHex,
     this.status = 'onaylandı',
+    this.isDismissedFromRequests = false,
     this.customerId,
     this.barberId,
   });
@@ -35,6 +37,7 @@ class AppointmentModel {
     String? additionalPeople,
     String? colorHex,
     String? status,
+    bool? isDismissedFromRequests,
     String? customerId,
     String? barberId,
   }) {
@@ -48,6 +51,7 @@ class AppointmentModel {
       additionalPeople: additionalPeople ?? this.additionalPeople,
       colorHex: colorHex ?? this.colorHex,
       status: status ?? this.status,
+      isDismissedFromRequests: isDismissedFromRequests ?? this.isDismissedFromRequests,
       customerId: customerId ?? this.customerId,
       barberId: barberId ?? this.barberId,
     );
@@ -64,6 +68,7 @@ class AppointmentModel {
       'additional_people': additionalPeople,
       'color_hex': colorHex,
       'status': status,
+      'is_dismissed_from_requests': isDismissedFromRequests,
       'customer_id': customerId,
       'barber_id': barberId,
     };
@@ -78,8 +83,9 @@ class AppointmentModel {
       durationMinutes: (map['duration_minutes'] ?? map['durationMinutes'] ?? 60 as num).toInt(),
       price: ((map['price'] ?? 0.0) as num).toDouble(),
       additionalPeople: (map['additional_people'] ?? map['additionalPeople'] ?? '') as String,
-      colorHex: (map['color_hex'] ?? map['colorHex'] ?? '#4CAF50') as String,
-      status: (map['status'] ?? 'onaylandı') as String,
+      colorHex: map['color_hex'] as String? ?? '#000000',
+      status: map['status'] as String? ?? 'onaylandı',
+      isDismissedFromRequests: map['is_dismissed_from_requests'] as bool? ?? false,
       customerId: map['customer_id'] as String?,
       barberId: map['barber_id'] as String?,
     );

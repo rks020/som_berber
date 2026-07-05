@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
-import { LayoutDashboard, Users, Scissors, CalendarCheck, LogOut, Check, X, Trash2, Wallet, Clock } from 'lucide-react';
+import { LayoutDashboard, Users, Scissors, CalendarCheck, LogOut, Check, X, Trash2, Wallet, Clock, Phone, MessageCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { tr } from 'date-fns/locale';
 
@@ -141,6 +141,21 @@ const Sidebar = ({ onLogout, unreadCount }: { onLogout: () => void, unreadCount:
 };
 
 import { startOfWeek, addDays } from 'date-fns';
+
+let sharedAudioCtx: AudioContext | null = null;
+const initAudio = () => {
+  if (!sharedAudioCtx) {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    if (AudioContextClass) sharedAudioCtx = new AudioContextClass();
+  }
+  if (sharedAudioCtx && sharedAudioCtx.state === 'suspended') {
+    sharedAudioCtx.resume();
+  }
+};
+// Resume audio context on any click to bypass autoplay policies
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', initAudio, { once: true });
+}
 
 const AppointmentsManager = () => {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -315,7 +330,7 @@ const AppointmentsManager = () => {
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
   const hours = Array.from({ length: 15 }, (_, i) => i + 8); // 8 to 22
 
-  const filteredAppointments = appointments.filter(a => a.barber_id === selectedBarberId);
+  const filteredAppointments = appointments.filter(a => a.barber_id === selectedBarberId && a.status !== 'iptal' && a.status !== 'reddedildi');
 
 
 
@@ -1197,10 +1212,45 @@ const FinanceManager = () => {
 const RequestsManager = () => {
   const [requests, setRequests] = useState<Appointment[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [suggestingRequestId, setSuggestingRequestId] = useState<string | null>(null);
   const [suggestedDateTimeList, setSuggestedDateTimeList] = useState('');
+
+  const playDingDong = () => {
+    try {
+      initAudio();
+      const ctx = sharedAudioCtx;
+      if (!ctx) return;
+      
+      // Ding (A5)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(880, ctx.currentTime);
+      gain1.gain.setValueAtTime(0.5, ctx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + 0.5);
+
+      // Dong (E5)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(659.25, ctx.currentTime + 0.3);
+      gain2.gain.setValueAtTime(0.5, ctx.currentTime + 0.3);
+      gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 1.0);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(ctx.currentTime + 0.3);
+      osc2.stop(ctx.currentTime + 1.0);
+    } catch (e) {
+      console.error('Audio play error:', e);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -1208,8 +1258,12 @@ const RequestsManager = () => {
     // Subscribe to realtime changes in appointments to keep requests synced
     const channel = supabase
       .channel('web:requests')
-      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'appointments' }, () => {
+      .on('postgres_changes' as any, { event: '*', schema: 'public', table: 'appointments' }, (payload: any) => {
+        console.log('Admin Appointments Realtime:', payload);
         fetchData();
+        if (payload.eventType === 'INSERT') {
+          playDingDong();
+        }
       })
       .subscribe();
 
@@ -1223,10 +1277,14 @@ const RequestsManager = () => {
     const { data: bData } = await supabase.from('barbers').select('*');
     if (bData) setBarbers(bData);
 
+    const { data: cData } = await supabase.from('customers').select('*');
+    if (cData) setCustomers(cData);
+
     const { data: rData } = await supabase
       .from('appointments')
       .select('*')
-      .eq('status', 'bekliyor')
+      .in('status', ['bekliyor', 'saat_onerildi', 'onaylandı', 'iptal', 'reddedildi'])
+      .eq('is_dismissed_from_requests', false)
       .order('date_time', { ascending: true });
     
     if (rData) setRequests(rData);
@@ -1239,8 +1297,8 @@ const RequestsManager = () => {
   };
 
   const handleReject = async (id: string) => {
-    if (confirm('Bu randevu talebini reddetmek (silmek) istediğinize emin misiniz?')) {
-      await supabase.from('appointments').delete().eq('id', id);
+    if (confirm('Bu randevu talebini reddetmek istediğinize emin misiniz?')) {
+      await supabase.from('appointments').update({ status: 'reddedildi' }).eq('id', id);
       fetchData();
     }
   };
@@ -1256,6 +1314,11 @@ const RequestsManager = () => {
     fetchData();
   };
 
+  const handleDismiss = async (id: string) => {
+    await supabase.from('appointments').update({ is_dismissed_from_requests: true }).eq('id', id);
+    fetchData();
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
@@ -1268,7 +1331,16 @@ const RequestsManager = () => {
       {loading ? <p>Yükleniyor...</p> : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {requests.map(r => (
-            <div key={r.id} className="glass-panel" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div key={r.id} className="glass-panel" style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {(r.status === 'onaylandı' || r.status === 'iptal' || r.status === 'reddedildi') && (
+                <button 
+                  onClick={() => handleDismiss(r.id)} 
+                  style={{ position: 'absolute', top: '4px', right: '4px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem', padding: '4px' }}
+                  title="Listeden Kaldır"
+                >
+                  ✕
+                </button>
+              )}
               <div>
                 <h3 style={{ margin: '0 0 8px 0', color: 'var(--primary-color)' }}>
                   {r.title}
@@ -1280,58 +1352,95 @@ const RequestsManager = () => {
                   Tarih/Saat: {format(new Date(r.date_time), 'dd MMM yyyy HH:mm', { locale: tr })}
                 </p>
               </div>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                {suggestingRequestId === r.id ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
-                    <input 
-                      type="datetime-local" 
-                      value={suggestedDateTimeList} 
-                      onChange={e => setSuggestedDateTimeList(e.target.value)} 
-                      style={{ padding: '6px', fontSize: '0.9rem', borderRadius: '4px', background: '#222', border: '1px solid var(--primary-color)', color: 'white' }} 
-                    />
-                    <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  {suggestingRequestId === r.id ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+                      <input 
+                        type="datetime-local" 
+                        value={suggestedDateTimeList} 
+                        onChange={e => setSuggestedDateTimeList(e.target.value)} 
+                        style={{ padding: '6px', fontSize: '0.9rem', borderRadius: '4px', background: '#222', border: '1px solid var(--primary-color)', color: 'white' }} 
+                      />
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button 
+                          onClick={() => setSuggestingRequestId(null)} 
+                          style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.1)', color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}
+                        >
+                          İptal
+                        </button>
+                        <button 
+                          onClick={() => handleSuggestNewTimeList(r.id)} 
+                          style={{ padding: '6px 12px', background: '#ff9800', color: 'black', fontWeight: 'bold', fontSize: '0.85rem' }}
+                        >
+                          Gönder
+                        </button>
+                      </div>
+                    </div>
+                  ) : r.status === 'saat_onerildi' ? (
+                    <div style={{ padding: '8px 16px', background: 'rgba(255, 152, 0, 0.1)', color: '#ff9800', border: '1px solid #ff9800', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                      Müşteri Yanıtı Bekleniyor
+                    </div>
+                  ) : r.status === 'onaylandı' ? (
+                    <div style={{ padding: '8px 16px', background: 'rgba(76, 175, 80, 0.1)', color: '#4caf50', border: '1px solid #4caf50', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                      Onaylandı
+                    </div>
+                  ) : r.status === 'iptal' || r.status === 'reddedildi' ? (
+                    <div style={{ padding: '8px 16px', background: 'rgba(244, 67, 54, 0.1)', color: '#f44336', border: '1px solid #f44336', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                      İptal Edildi
+                    </div>
+                  ) : (
+                    <>
                       <button 
-                        onClick={() => setSuggestingRequestId(null)} 
-                        style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.1)', color: 'white', fontWeight: 'bold', fontSize: '0.85rem' }}
+                        onClick={() => handleReject(r.id)} 
+                        style={{ background: 'transparent', border: '1px solid #ff4444', color: '#ff4444', padding: '8px 16px', fontWeight: 'bold' }}
                       >
-                        İptal
+                        Reddet
                       </button>
                       <button 
-                        onClick={() => handleSuggestNewTimeList(r.id)} 
-                        style={{ padding: '6px 12px', background: '#ff9800', color: 'black', fontWeight: 'bold', fontSize: '0.85rem' }}
+                        onClick={() => {
+                          const localDt = new Date(r.date_time);
+                          const tzOffset = localDt.getTimezoneOffset() * 60000;
+                          const localISOTime = new Date(localDt.getTime() - tzOffset).toISOString().slice(0, 16);
+                          setSuggestedDateTimeList(localISOTime);
+                          setSuggestingRequestId(r.id);
+                        }} 
+                        style={{ background: 'transparent', border: '1px solid #ff9800', color: '#ff9800', padding: '8px 16px', fontWeight: 'bold' }}
                       >
-                        Gönder
+                        Saat Öner
+                      </button>
+                      <button 
+                        onClick={() => handleApprove(r.id)} 
+                        style={{ background: 'var(--primary-color)', color: 'black', padding: '8px 16px', fontWeight: 'bold' }}
+                      >
+                        Onayla
+                      </button>
+                    </>
+                  )}
+                </div>
+                {(() => {
+                  const customer = customers.find(c => c.id === r.customer_id);
+                  const phone = customer?.phone || '';
+                  if (!phone) return null;
+                  
+                  const handleCall = () => window.open(`tel:${phone}`, '_self');
+                  const handleWhatsApp = () => {
+                    const cleanPhone = phone.replace(/\D/g, '');
+                    const finalPhone = cleanPhone.startsWith('90') ? cleanPhone : (cleanPhone.startsWith('0') ? '9' + cleanPhone : '90' + cleanPhone);
+                    window.open(`https://wa.me/${finalPhone}`, '_blank');
+                  };
+
+                  return (
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px', justifyContent: 'flex-end' }}>
+                      <button onClick={handleCall} style={{ background: '#333', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}>
+                        <Phone size={14} /> Ara
+                      </button>
+                      <button onClick={handleWhatsApp} style={{ background: '#25D366', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 'bold', fontSize: '0.85rem' }}>
+                        <MessageCircle size={14} /> WhatsApp
                       </button>
                     </div>
-                  </div>
-                ) : (
-                  <>
-                    <button 
-                      onClick={() => handleReject(r.id)} 
-                      style={{ background: 'transparent', border: '1px solid #ff4444', color: '#ff4444', padding: '8px 16px', fontWeight: 'bold' }}
-                    >
-                      Reddet
-                    </button>
-                    <button 
-                      onClick={() => {
-                        const localDt = new Date(r.date_time);
-                        const tzOffset = localDt.getTimezoneOffset() * 60000;
-                        const localISOTime = new Date(localDt.getTime() - tzOffset).toISOString().slice(0, 16);
-                        setSuggestedDateTimeList(localISOTime);
-                        setSuggestingRequestId(r.id);
-                      }} 
-                      style={{ background: 'transparent', border: '1px solid #ff9800', color: '#ff9800', padding: '8px 16px', fontWeight: 'bold' }}
-                    >
-                      Saat Öner
-                    </button>
-                    <button 
-                      onClick={() => handleApprove(r.id)} 
-                      style={{ background: 'var(--primary-color)', color: 'black', padding: '8px 16px', fontWeight: 'bold' }}
-                    >
-                      Onayla
-                    </button>
-                  </>
-                )}
+                  );
+                })()}
               </div>
             </div>
           ))}

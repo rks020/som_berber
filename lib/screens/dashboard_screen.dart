@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../models/customer.dart';
 import 'package:provider/provider.dart';
 import '../providers/salon_provider.dart';
 import '../theme/app_theme.dart';
@@ -70,6 +72,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }).toList();
 
     final todayAppointments = provider.appointments.where((a) {
+      if (a.status == 'iptal' || a.status == 'reddedildi') return false;
       final aDate = a.dateTime;
       return aDate.year == now.year &&
           aDate.month == now.month &&
@@ -483,7 +486,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       _buildSectionTitle(
-                        'Bekleyen Randevular (${provider.appointments.where((a) => a.status == 'bekliyor').length})',
+                        'Randevu Talepleri (${provider.appointments.where((a) => ['bekliyor', 'saat_onerildi', 'onaylandı', 'iptal', 'reddedildi'].contains(a.status) && !a.isDismissedFromRequests).length})',
                       ),
                       Icon(
                         _isPendingAppointmentsExpanded ? Icons.expand_less : Icons.expand_more,
@@ -496,7 +499,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 if (_isPendingAppointmentsExpanded) ...[
                   const SizedBox(height: 12),
                   (() {
-                    final pendingApps = provider.appointments.where((a) => a.status == 'bekliyor').toList();
+                    final pendingApps = provider.appointments.where((a) => ['bekliyor', 'saat_onerildi', 'onaylandı', 'iptal', 'reddedildi'].contains(a.status) && !a.isDismissedFromRequests).toList();
                     if (pendingApps.isEmpty) {
                       return Container(
                         width: double.infinity,
@@ -536,15 +539,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(color: AppTheme.goldPrimary.withOpacity(0.2)),
                           ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
-                              Expanded(
+                              Row(
+                                children: [
+                                  Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      appt.title,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          appt.title,
+                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                        ),
+                                        if (appt.status == 'onaylandı' || appt.status == 'iptal' || appt.status == 'reddedildi')
+                                          InkWell(
+                                            onTap: () async {
+                                              await provider.updateAppointment(appt.copyWith(isDismissedFromRequests: true));
+                                            },
+                                            child: const Icon(Icons.close, color: AppTheme.textMuted, size: 20),
+                                          ),
+                                      ],
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
@@ -559,14 +577,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ],
                                 ),
                               ),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.close, color: Colors.red),
-                                    onPressed: () => provider.deleteAppointment(appt.id),
-                                    tooltip: 'Reddet',
-                                  ),
+                              appt.status == 'saat_onerildi'
+                                  ? Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(color: Colors.orange),
+                                      ),
+                                      child: const Text('Müşteri Yanıtı Bekleniyor', style: TextStyle(color: Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
+                                    )
+                                  : appt.status == 'onaylandı'
+                                      ? Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: Colors.green),
+                                          ),
+                                          child: const Text('Onaylandı', style: TextStyle(color: Colors.green, fontSize: 12, fontWeight: FontWeight.bold)),
+                                        )
+                                      : (appt.status == 'iptal' || appt.status == 'reddedildi')
+                                          ? Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red.withOpacity(0.1),
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(color: Colors.red),
+                                              ),
+                                              child: Text(appt.status == 'iptal' ? 'Müşteri İptal Etti' : 'Reddedildi', style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.bold)),
+                                            )
+                                          : Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.close, color: Colors.red),
+                                          onPressed: () => provider.updateAppointment(appt.copyWith(status: 'reddedildi')),
+                                          tooltip: 'Reddet',
+                                        ),
                                   IconButton(
                                     icon: const Icon(Icons.more_time, color: Colors.orange),
                                     onPressed: () async {
@@ -604,18 +652,65 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ),
                                   IconButton(
                                     icon: const Icon(Icons.check, color: Colors.green),
-                                    onPressed: () {
-                                      final approved = appt.copyWith(status: 'onaylandı');
-                                      provider.updateAppointment(approved);
+                                    onPressed: () async {
+                                        final approved = appt.copyWith(status: 'onaylandı');
+                                        await provider.updateAppointment(approved);
+                                      },
+                                      tooltip: 'Onayla',
+                                    ),
+                                  ],
+                                ),
+                            ],
+                          ),
+                          (() {
+                            final customer = provider.customers.firstWhere((c) => c.id == appt.customerId, orElse: () => Customer(id: '', name: '', phone: '', createdAt: DateTime.now()));
+                            if (customer.phone.isEmpty) return const SizedBox.shrink();
+                            return Padding(
+                              padding: const EdgeInsets.only(top: 12),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  ElevatedButton.icon(
+                                    onPressed: () async {
+                                      final url = Uri.parse('tel:${customer.phone}');
+                                      if (await canLaunchUrl(url)) await launchUrl(url);
                                     },
-                                    tooltip: 'Onayla',
+                                    icon: const Icon(Icons.phone, size: 16),
+                                    label: const Text('Ara'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF333333),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: () async {
+                                      final clean = customer.phone.replaceAll(RegExp(r'\D'), '');
+                                      final finalPhone = clean.startsWith('90') ? clean : (clean.startsWith('0') ? '9$clean' : '90$clean');
+                                      final url = Uri.parse('https://wa.me/$finalPhone');
+                                      if (await canLaunchUrl(url)) await launchUrl(url, mode: LaunchMode.externalApplication);
+                                    },
+                                    icon: const Icon(Icons.chat, size: 16),
+                                    label: const Text('WhatsApp'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF25D366),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    ),
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
-                        );
-                      },
+                            );
+                          })(),
+                        ],
+                      ),
+                    );
+                  },
                     );
                   })(),
                 ],

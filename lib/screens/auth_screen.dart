@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'home_screen.dart';
 import 'customer_home_screen.dart';
 import 'package:provider/provider.dart';
@@ -107,6 +108,17 @@ class _AuthScreenState extends State<AuthScreen> {
                       final prefs = await SharedPreferences.getInstance();
                       await prefs.setString('admin_selected_barber_id', barber.id);
                       await prefs.setBool('is_admin_logged_in', true);
+                      
+                      // Save FCM Token
+                      try {
+                        final token = await FirebaseMessaging.instance.getToken();
+                        if (token != null) {
+                          await Supabase.instance.client.from('admin_device_tokens').upsert({'token': token}, onConflict: 'token');
+                        }
+                      } catch (e) {
+                        debugPrint('FCM Token error: $e');
+                      }
+
                       if (context.mounted) {
                         Navigator.pop(context); // Close dialog
                         Navigator.pushReplacement(

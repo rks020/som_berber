@@ -8,9 +8,18 @@ import 'theme/app_theme.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // Initialize Supabase
   await Supabase.initialize(
@@ -38,8 +47,48 @@ void main() async {
   );
 }
 
-class YilmazBarberApp extends StatelessWidget {
+class YilmazBarberApp extends StatefulWidget {
   const YilmazBarberApp({super.key});
+
+  @override
+  State<YilmazBarberApp> createState() => _YilmazBarberAppState();
+}
+
+class _YilmazBarberAppState extends State<YilmazBarberApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _saveTokenIfAdmin();
+  }
+
+  Future<void> _saveTokenIfAdmin() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool('is_admin_logged_in') == true) {
+        final token = await FirebaseMessaging.instance.getToken();
+        if (token != null) {
+          await Supabase.instance.client.from('admin_device_tokens').upsert({'token': token}, onConflict: 'token');
+        }
+      }
+    } catch (e) {
+      debugPrint('Error saving token: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Reload data when the app comes back to foreground
+      context.read<SalonProvider>().reloadData();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,3 +109,4 @@ class YilmazBarberApp extends StatelessWidget {
     );
   }
 }
+
