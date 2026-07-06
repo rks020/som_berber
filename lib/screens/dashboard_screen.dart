@@ -543,26 +543,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          appt.title,
-                                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                        ),
-                                        if (appt.status == 'onaylandı' || appt.status == 'iptal' || appt.status == 'reddedildi')
-                                          InkWell(
-                                            onTap: () async {
-                                              await provider.updateAppointment(appt.copyWith(isDismissedFromRequests: true));
-                                            },
-                                            child: const Icon(Icons.close, color: AppTheme.textMuted, size: 20),
-                                          ),
-                                      ],
+                                    Text(
+                                      appt.title,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
@@ -577,7 +566,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ],
                                 ),
                               ),
-                              appt.status == 'saat_onerildi'
+                              const SizedBox(width: 8),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  if (appt.status == 'onaylandı' || appt.status == 'iptal' || appt.status == 'reddedildi')
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 8.0),
+                                      child: InkWell(
+                                        onTap: () async {
+                                          await provider.updateAppointment(appt.copyWith(isDismissedFromRequests: true));
+                                        },
+                                        child: const Icon(Icons.close, color: AppTheme.textMuted, size: 20),
+                                      ),
+                                    ),
+                                  appt.status == 'saat_onerildi'
                                   ? Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                       decoration: BoxDecoration(
