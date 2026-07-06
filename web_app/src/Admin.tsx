@@ -234,11 +234,23 @@ const AppointmentsManager = () => {
           setPendingRequest(newApp);
         }
       })
-      .on('postgres_changes' as any, { event: 'UPDATE', schema: 'public', table: 'appointments' }, () => {
+      .on('postgres_changes' as any, { event: 'UPDATE', schema: 'public', table: 'appointments' }, (payload: any) => {
         fetchData();
+        setPendingRequest(prev => {
+          if (prev && prev.id === payload.new.id && payload.new.status !== 'bekliyor') {
+            return null;
+          }
+          return prev;
+        });
       })
-      .on('postgres_changes' as any, { event: 'DELETE', schema: 'public', table: 'appointments' }, () => {
+      .on('postgres_changes' as any, { event: 'DELETE', schema: 'public', table: 'appointments' }, (payload: any) => {
         fetchData();
+        setPendingRequest(prev => {
+          if (prev && prev.id === payload.old.id) {
+            return null;
+          }
+          return prev;
+        });
       })
       .subscribe();
 
