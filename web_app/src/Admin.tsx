@@ -1407,7 +1407,7 @@ const RequestsManager = () => {
                     </div>
                   ) : r.status === 'iptal' || r.status === 'reddedildi' ? (
                     <div style={{ padding: '8px 16px', background: 'rgba(244, 67, 54, 0.1)', color: '#f44336', border: '1px solid #f44336', borderRadius: '4px', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                      İptal Edildi
+                      {r.status === 'iptal' ? 'Müşteri İptal Etti' : 'Reddedildi'}
                     </div>
                   ) : (
                     <>
