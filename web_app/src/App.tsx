@@ -630,10 +630,10 @@ const AppContent = () => {
     <div className="app-container">
       {isBooking && (
         <header>
-          <div className="logo">
+          <Link to="/" className="logo" style={{ textDecoration: 'none', color: 'inherit' }}>
             <img src="/logo.png" alt="Logo" style={{ width: '40px', height: '40px', borderRadius: '8px' }} />
             SO Yılmaz Berber
-          </div>
+          </Link>
           <Link to="/" style={{ color: 'var(--text-muted)', fontSize: '13px', textDecoration: 'none' }}>← Ana Sayfaya Dön</Link>
         </header>
       )}
