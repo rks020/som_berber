@@ -426,13 +426,41 @@ const Booking = () => {
       const combinedCategoryName = selectedList.map(s => s.name).join(', ');
       const totalCombinedPrice = selectedList.reduce((acc, curr) => acc + curr.price, 0);
       
-      // Upsert customer (simplified)
-      const customerId = crypto.randomUUID();
-      await supabase.from('customers').insert({
-        id: customerId,
-        name: customerName,
-        phone: customerPhone
-      });
+      // Check if customer exists
+      const digits = customerPhone.replace(/\D/g, '');
+      const formats = [customerPhone, digits];
+      if (digits.length === 10) {
+        formats.push('0' + digits);
+        formats.push('90' + digits);
+        formats.push('+90' + digits);
+      } else if (digits.length === 11 && digits.startsWith('0')) {
+        const tenDigit = digits.substring(1);
+        formats.push(tenDigit);
+        formats.push('90' + tenDigit);
+        formats.push('+90' + tenDigit);
+      } else if (digits.length > 10 && digits.startsWith('90')) {
+        const tenDigit = digits.substring(2);
+        formats.push(tenDigit);
+        formats.push('0' + tenDigit);
+        formats.push('+' + digits);
+      }
+
+      const { data: existingCustomers } = await supabase
+        .from('customers')
+        .select('id')
+        .in('phone', formats);
+
+      let customerId;
+      if (existingCustomers && existingCustomers.length > 0) {
+        customerId = existingCustomers[0].id;
+      } else {
+        customerId = crypto.randomUUID();
+        await supabase.from('customers').insert({
+          id: customerId,
+          name: customerName,
+          phone: customerPhone
+        });
+      }
 
       const [hours, minutes] = selectedTime.split(':').map(Number);
       const appTime = new Date(selectedDate);
