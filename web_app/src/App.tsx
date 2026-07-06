@@ -46,6 +46,23 @@ const BookingHome = () => {
     fetchBarbers();
   }, []);
 
+  useEffect(() => {
+    const channel = supabase.channel('customer-appointments')
+      .on('postgres_changes' as any, { event: 'UPDATE', schema: 'public', table: 'appointments' }, (payload: any) => {
+        setMyAppointments(prev => prev.map(app => 
+          app.id === payload.new.id ? { ...app, status: payload.new.status, date_time: payload.new.date_time } : app
+        ));
+      })
+      .on('postgres_changes' as any, { event: 'DELETE', schema: 'public', table: 'appointments' }, (payload: any) => {
+        setMyAppointments(prev => prev.filter(app => app.id !== payload.old.id));
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchPhone) return;
