@@ -80,13 +80,24 @@ serve(async (req) => {
       const newStatus = record?.status
 
       if (oldStatus !== newStatus) {
-        // Notify admin if customer cancels an approved appointment
-        if (oldStatus === 'onaylandı' && newStatus === 'iptal') {
+        // Notify admin if customer cancels an appointment
+        if (newStatus === 'iptal' && oldStatus !== 'iptal') {
           const { data: admins } = await supabase.from('admin_device_tokens').select('token')
           if (admins) {
+            let apptTimeStr = ''
+            if (record.date_time) {
+              const dt = new Date(record.date_time)
+              // Adjust for local time display if needed. Assuming TR time is +03:00.
+              const trTime = new Date(dt.getTime())
+              const hours = trTime.getHours().toString().padStart(2, '0')
+              const minutes = trTime.getMinutes().toString().padStart(2, '0')
+              const day = trTime.getDate().toString().padStart(2, '0')
+              const month = (trTime.getMonth() + 1).toString().padStart(2, '0')
+              apptTimeStr = `${day}.${month}.${dt.getFullYear()} ${hours}:${minutes} `
+            }
             for (const admin of admins) {
               if (admin.token) {
-                await sendFcm(admin.token, 'Randevu İptali', `Müşteri onaylanmış bir randevusunu iptal etti.`)
+                await sendFcm(admin.token, 'Randevu İptali', `Müşteriniz ${apptTimeStr}tarihindeki randevusunu iptal etti.`)
               }
             }
           }
