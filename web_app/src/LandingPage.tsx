@@ -58,8 +58,8 @@ export default function LandingPage() {
     { icon: '🧴', image: '/service_hair_mask.jpg', name: 'Saç Maskesi', duration: '~30 dk', price: '₺200' },
     { icon: '🎨', image: '/service_hair_dye_male.jpg', name: 'Saç Boyama', duration: '~60 dk', price: '₺800' },
     { icon: '🖌️', image: '/service_beard_dye.jpg', name: 'Sakal Boyama', duration: '~30 dk', price: '₺400' },
-    { icon: '💫', image: '/service_haircut.jpg', name: 'Keratin', duration: '~90 dk', price: '₺800' },
-    { icon: '🕯️', image: '/service_beard.jpg', name: 'Ağda', duration: '~15 dk', price: '₺100' },
+    { icon: '💫', image: '/service_keratin.jpg', name: 'Keratin', duration: '~90 dk', price: '₺800' },
+    { icon: '🕯️', image: '/service_wax.jpg', name: 'Ağda', duration: '~15 dk', price: '₺100' },
   ];
 
   const team = [
