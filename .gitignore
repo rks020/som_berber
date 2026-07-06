@@ -49,3 +49,4 @@ supabase/config.toml
 *firebase-adminsdk*.json
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist
+*.p8
