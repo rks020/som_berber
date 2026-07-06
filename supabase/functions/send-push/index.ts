@@ -95,9 +95,16 @@ serve(async (req) => {
               const month = (trTime.getMonth() + 1).toString().padStart(2, '0')
               apptTimeStr = `${day}.${month}.${dt.getFullYear()} ${hours}:${minutes} `
             }
+            
+            let customerName = 'Bir müşteriniz'
+            if (record.customer_id) {
+              const { data: c } = await supabase.from('customers').select('name').eq('id', record.customer_id).single()
+              if (c && c.name) customerName = c.name
+            }
+
             for (const admin of admins) {
               if (admin.token) {
-                await sendFcm(admin.token, 'Randevu İptali', `Müşteriniz ${apptTimeStr}tarihindeki randevusunu iptal etti.`)
+                await sendFcm(admin.token, 'Randevu İptali', `${customerName}, ${apptTimeStr}tarihindeki randevusunu iptal etmiştir.`)
               }
             }
           }
