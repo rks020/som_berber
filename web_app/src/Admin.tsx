@@ -278,7 +278,15 @@ const AppointmentsManager = () => {
     if (sData) setServices(sData);
 
     const { data: aData } = await supabase.from('appointments').select('*').order('date_time', { ascending: false });
-    if (aData) setAppointments(aData);
+    if (aData) {
+      setAppointments(aData);
+      setPendingRequest(prev => {
+        if (!prev) return null;
+        const stillPending = aData.find((a: any) => a.id === prev.id && a.status === 'bekliyor');
+        if (!stillPending) return null;
+        return prev;
+      });
+    }
     setLoading(false);
   };
 
