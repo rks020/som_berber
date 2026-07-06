@@ -66,7 +66,7 @@ class _AppointmentScreenState extends State<AppointmentScreen> {
           );
 
           final effectiveBarberId = _selectedBarberId ?? (provider.barbers.isNotEmpty ? provider.barbers.first.id : null);
-          final filteredAppointments = provider.appointments.where((a) => a.barberId == effectiveBarberId).toList();
+          final filteredAppointments = provider.appointments.where((a) => a.barberId == effectiveBarberId && a.status != 'iptal' && a.status != 'reddedildi').toList();
 
           // Re-create data source when barber changes or appointments change
           _currentBarberId = effectiveBarberId;

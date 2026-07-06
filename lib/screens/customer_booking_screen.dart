@@ -81,6 +81,7 @@ class _CustomerBookingScreenState extends State<CustomerBookingScreen> {
     // Check overlap
     for (var app in appointments) {
       if (app.barberId != widget.barber.id) continue;
+      if (app.status == 'iptal' || app.status == 'reddedildi') continue;
       
       final appStart = app.dateTime;
       final appEnd = app.dateTime.add(Duration(minutes: app.durationMinutes));
