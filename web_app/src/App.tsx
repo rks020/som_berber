@@ -149,13 +149,13 @@ const BookingHome = () => {
     try {
       const { error } = await supabase
         .from('appointments')
-        .delete()
+        .update({ status: 'iptal' })
         .eq('id', id);
       
       if (error) throw error;
       alert('Randevu talebiniz iptal edildi.');
       // Refresh list locally
-      setMyAppointments(prev => prev.filter(app => app.id !== id));
+      setMyAppointments(prev => prev.map(app => app.id === id ? { ...app, status: 'iptal' } : app));
     } catch (err) {
       alert('İptal işlemi sırasında hata oluştu.');
       console.error(err);
@@ -249,6 +249,12 @@ const BookingHome = () => {
                     statusText = 'Onaylandı';
                     statusColor = '#4CAF50';
                     showCancel = true;
+                  } else if (app.status === 'iptal') {
+                    statusText = 'İptal Ettiniz';
+                    statusColor = '#F44336';
+                  } else if (app.status === 'reddedildi') {
+                    statusText = 'Reddedildi';
+                    statusColor = '#F44336';
                   }
 
                   return (
